@@ -56,6 +56,17 @@
       <div class="info-row"><span class="info-label">CPU</span><span class="info-val">{{ sys.temp }}°C</span></div>
     </div>
 
+    <!-- FPS Centrale server status -->
+    <div class="setting-card">
+      <div class="setting-title">FPS Centrale server</div>
+      <div class="setting-desc">{% if lang == 'en' %}Connection status to FPS remote monitoring{% else %}Verbindingsstatus met FPS remote monitoring{% endif %}</div>
+      {% if beacon.active %}
+      <div class="notif-configured">✓ {% if lang == 'en' %}Connected{% else %}Verbonden{% endif %} — <strong>{{ beacon.name or beacon.client_id }}</strong> {% if beacon.location %}· 📍 {{ beacon.location }}{% endif %}</div>
+      {% else %}
+      <div class="notif-unconfigured">⚠ {% if lang == 'en' %}Not connected{% else %}Niet verbonden{% endif %}</div>
+      {% endif %}
+    </div>
+
     <!-- Algemeen -->
     <div class="setting-card">
       <div class="setting-title">{% if lang == 'en' %}General{% else %}Algemeen{% endif %}</div>
@@ -170,29 +181,7 @@
         <a class="btn bo" href="/restart-cups" onclick="return confirm('CUPS herstarten?')">🔄 Restart CUPS</a>
         <a class="btn br" href="/cancel" onclick="return confirm('Alle jobs annuleren?')">🗑 {% if lang == 'en' %}Clear all queues{% else %}Wis alle queues{% endif %}</a>
       </div>
-    </div>
-
-    <!-- Centrale server -->
-    <div class="setting-card" style="grid-column:1/-1">
-      <div class="setting-title">{% if lang == 'en' %}Central management{% else %}Centrale beheer{% endif %}</div>
-      <div class="setting-desc">{% if lang == 'en' %}Connect this device to the FPS central dashboard so you can monitor it remotely{% else %}Verbind dit apparaat met het FPS centrale dashboard zodat je het op afstand kunt monitoren{% endif %}</div>
-      {% if beacon.active %}
-      <div class="notif-configured">✓ {% if lang == 'en' %}Connected to central dashboard{% else %}Verbonden met centraal dashboard{% endif %} — <strong>{{ beacon.name or beacon.client_id }}</strong> {% if beacon.location %}· 📍 {{ beacon.location }}{% endif %}</div>
-      {% else %}
-      <div class="notif-unconfigured">⚠ {% if lang == 'en' %}Not connected — fill in Device ID below{% else %}Niet verbonden — vul hieronder het apparaat ID in{% endif %}</div>
-      {% endif %}
-      <form method="POST">
-        <input type="hidden" name="action" value="beacon">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="field">
-            <label>{% if lang == 'en' %}Central server URL{% else %}Centrale server URL{% endif %}</label>
-            <input type="text" name="central_url" value="{{ beacon.central_url or '' }}" placeholder="https://fps-central.railway.app">
-          </div>
-          <div class="field">
-            <label>API Key</label>
-            <input type="password" name="api_key" value="{{ beacon.api_key or '' }}" placeholder="flitshokje-secret-2026">
-          </div>
-          <div class="field">
+    </div><div class="field">
             <label>{% if lang == 'en' %}Client ID{% else %}Klant ID{% endif %}</label>
             <input type="text" name="client_id" value="{{ beacon.client_id or '' }}" placeholder="klant-amsterdam-01">
           </div>
