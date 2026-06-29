@@ -1,0 +1,7 @@
+logs/
+__pycache__/
+*.pyc
+config.json
+logs/auth.json
+logs/history.json
+logs/stats.json
