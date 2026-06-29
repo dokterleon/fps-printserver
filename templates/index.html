@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);padding:14px 16px}
+.stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px}
+.stat-val{font-size:21px;font-weight:700;line-height:1.1}
+.vy{color:var(--y)}.vg{color:var(--green)}.vr{color:var(--red)}.vo{color:var(--orange)}
+.stat-hint{font-size:11px;color:var(--muted);margin-top:3px}
+.mode-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.mode-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px 16px;border-radius:14px;background:var(--s2);border:2px solid var(--b2);text-decoration:none;color:var(--sub);transition:all .2s;text-align:center;position:relative}
+.mode-btn:hover{background:var(--s3);border-color:rgba(255,224,0,.25);color:var(--t)}
+.mode-btn.active{background:var(--yb);border-color:rgba(255,224,0,.5);color:var(--y)}
+.mode-icon{font-size:32px;margin-bottom:10px;opacity:.5;transition:opacity .2s}
+.mode-btn.active .mode-icon{opacity:1}
+.mode-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.mode-desc{font-size:12px;color:var(--muted)}
+.mode-btn.active .mode-desc{color:rgba(255,224,0,.55)}
+.mode-badge{position:absolute;top:10px;right:10px;background:var(--y);color:#0a0a00;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;opacity:0;transition:opacity .2s}
+.mode-btn.active .mode-badge{opacity:1}
+.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.sys-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.sys-card{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);padding:13px 15px;display:flex;align-items:center;gap:12px}
+.sys-icon{font-size:20px;flex-shrink:0;width:28px;text-align:center}
+.sys-info{flex:1;min-width:0}
+.sys-name{font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+.sys-val{font-size:13px;font-weight:600;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sys-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-g{background:var(--green)}.dot-r{background:var(--red)}.dot-o{background:var(--orange)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.dot-pulse{animation:pulse 2s infinite}
+.mini-bar{height:3px;background:var(--b2);border-radius:2px;margin-top:5px;overflow:hidden}
+.mini-fill{height:100%;border-radius:2px;transition:width .5s}
+.fg{background:var(--green)}.fo{background:var(--orange)}.fr{background:var(--red)}
+.counters{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.counter{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);padding:14px 16px;text-align:center}
+.counter-num{font-size:26px;font-weight:700;color:var(--y)}
+.counter-label{font-size:11px;color:var(--muted);margin-top:4px}
+.queue-empty{color:var(--muted);font-size:13px;padding:6px 0}
+.job-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b);font-size:13px}
+.job-row:last-child{border-bottom:none}
+.job-num{font-family:monospace;font-size:11px;color:var(--muted);width:32px;flex-shrink:0}
+.job-name{flex:1;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.job-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0;animation:pulse 1.8s infinite}
+.qr-wrap{display:flex;align-items:center;gap:20px}
+.qr-img{background:white;border-radius:8px;padding:8px;flex-shrink:0;width:96px;height:96px}
+.qr-img img{width:80px;height:80px;display:block}
+.qr-ip{font-size:20px;font-weight:700;color:var(--t);font-family:monospace}
+.qr-hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
+@media(max-width:640px){
+  .stats4,.sys-grid,.counters{grid-template-columns:1fr 1fr}
+  .actions{grid-template-columns:1fr 1fr}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div id="banners"></div>
+
+  <div class="section-title">Printer</div>
+  <div class="stats4">
+    <div class="stat"><div class="stat-label">Status</div><div class="stat-val" id="stat-state">—</div></div>
+    <div class="stat"><div class="stat-label">Media</div><div class="stat-val" style="font-size:14px" id="stat-media">—</div></div>
+    <div class="stat"><div class="stat-label">Resterend</div><div class="stat-val vy" id="stat-remaining">—</div><div class="stat-hint">prints in rol</div></div>
+    <div class="stat"><div class="stat-label">Wachtrij</div><div class="stat-val" id="stat-qcount">0</div><div class="stat-hint">jobs</div></div>
+  </div>
+
+  <div class="section-title">Print mode</div>
+  <div class="mode-wrap">
+    <a class="mode-btn" href="/mode/4x6" id="mode-4x6">
+      <span class="mode-badge">Actief</span>
+      <div class="mode-icon">🖼</div>
+      <div class="mode-name">4×6 / 10×15</div>
+      <div class="mode-desc">Hele foto · geen snijlijn</div>
+    </a>
+    <a class="mode-btn" href="/mode/2x6" id="mode-2x6">
+      <span class="mode-badge">Actief</span>
+      <div class="mode-icon">✂️</div>
+      <div class="mode-name">2×6 strip ×2</div>
+      <div class="mode-desc">Twee strips · met snijlijn</div>
+    </a>
+  </div>
+
+  <div class="section-title">Acties</div>
+  <div class="actions">
+    <a class="btn by" href="/test-print">🖨 Test print</a>
+    <a class="btn bg" href="/resume">▶ Resume</a>
+    <a class="btn bo" href="/restart-cups" onclick="return confirm('CUPS herstarten?')">🔄 CUPS</a>
+    <a class="btn br" href="/cancel" onclick="return confirm('Alle jobs annuleren?')">🗑 Wis queue</a>
+  </div>
+
+  <div class="section-title">Systeem</div>
+  <div class="sys-grid">
+    <div class="sys-card">
+      <div class="sys-icon">📡</div>
+      <div class="sys-info"><div class="sys-name">AirPrint</div><div class="sys-val" id="sys-airprint">—</div></div>
+      <div class="sys-dot dot-pulse" id="dot-airprint"></div>
+    </div>
+    <div class="sys-card">
+      <div class="sys-icon">🔌</div>
+      <div class="sys-info"><div class="sys-name">Netwerk</div><div class="sys-val" id="sys-network">—</div></div>
+      <div class="sys-dot dot-pulse" id="dot-network"></div>
+    </div>
+    <div class="sys-card">
+      <div class="sys-icon">🖨</div>
+      <div class="sys-info"><div class="sys-name">CUPS</div><div class="sys-val" id="sys-cups">—</div></div>
+      <div class="sys-dot dot-pulse" id="dot-cups"></div>
+    </div>
+    <div class="sys-card">
+      <div class="sys-icon">🌡</div>
+      <div class="sys-info"><div class="sys-name">CPU temp</div><div class="sys-val" id="sys-temp">—</div></div>
+      <div class="sys-dot" id="dot-temp"></div>
+    </div>
+    <div class="sys-card">
+      <div class="sys-icon">💾</div>
+      <div class="sys-info"><div class="sys-name">Schijf</div><div class="sys-val" id="sys-disk">—</div><div class="mini-bar"><div class="mini-fill fg" id="bar-disk" style="width:0%"></div></div></div>
+    </div>
+    <div class="sys-card">
+      <div class="sys-icon">⏱</div>
+      <div class="sys-info"><div class="sys-name">Uptime</div><div class="sys-val" id="sys-uptime">—</div></div>
+    </div>
+  </div>
+
+  <div class="section-title">Statistieken</div>
+  <div class="counters">
+    <div class="counter"><div class="counter-num" id="cnt-today">—</div><div class="counter-label">Vandaag</div></div>
+    <div class="counter"><div class="counter-num" id="cnt-total">—</div><div class="counter-label">Totaal ooit</div></div>
+    <div class="counter"><div class="counter-num" id="cnt-rol">—</div><div class="counter-label">Sinds rol wissel</div></div>
+    <div class="counter"><div class="counter-num" style="font-size:14px;padding-top:6px" id="cnt-last">—</div><div class="counter-label">Laatste print</div></div>
+  </div>
+  <div style="margin-bottom:20px">
+    <a class="btn bgh" href="/reset-rol" onclick="return confirm('Nieuwe rol geplaatst — teller resetten?')">🔄 Nieuwe rol geplaatst</a>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-title">Wachtrij</div>
+    <div id="queue-list"><div class="queue-empty">Laden...</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-title">Verbinden via netwerk</div>
+    <div class="qr-wrap">
+      <div class="qr-img"><img src="/api/qr.png" alt="QR code"></div>
+      <div>
+        <div class="qr-ip" id="qr-ip">—</div>
+        <div class="qr-hint">Scan de QR code of typ het adres in je browser om het dashboard te openen op je telefoon of tablet</div>
+      </div>
+    </div>
+  </div>
+
+  <details style="background:var(--s2);border:1px solid var(--b);border-radius:var(--r);overflow:hidden">
+    <summary style="padding:12px 16px;font-size:12px;color:var(--muted);cursor:pointer">Ruwe CUPS status</summary>
+    <pre id="raw-status" style="padding:0 16px 14px;font-size:11px;color:var(--muted);font-family:monospace;white-space:pre-wrap;word-break:break-all">—</pre>
+  </details>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setDot(id, ok){
+  const el=document.getElementById(id);
+  if(el) el.className='sys-dot '+(ok?'dot-g':'dot-r');
+}
+
+async function pollPrinter(){
+  try{
+    const d=await fetch('/api/status').then(r=>r.json());
+    const l=(d.state||'').toLowerCase();
+    const sc=l.includes('print')?'vy':l.includes('error')||l.includes('paus')?'vr':'vg';
+    document.getElementById('stat-state').textContent=d.friendly_error||d.state||'—';
+    document.getElementById('stat-state').className='stat-val '+sc;
+    document.getElementById('stat-media').textContent=d.media||'—';
+    document.getElementById('stat-remaining').textContent=d.remaining||'—';
+    document.getElementById('stat-qcount').textContent=d.job_count??0;
+    document.getElementById('raw-status').textContent=d.raw_status||'—';
+    ['4x6','2x6'].forEach(k=>{
+      const el=document.getElementById('mode-'+k);
+      if(el) el.classList.toggle('active',d.current_mode===k);
+    });
+    const bEl=document.getElementById('banners');
+    let banners='';
+    if(d.friendly_error) banners+=`<div class="banner banner-red">⚠️ ${d.friendly_error}</div>`;
+    else if(d.low_paper)  banners+=`<div class="banner banner-orange">⚠️ Bijna op — nog ${d.remaining} prints resterend</div>`;
+    bEl.innerHTML=banners;
+    const ql=document.getElementById('queue-list');
+    if(!d.jobs||!d.jobs.length){
+      ql.innerHTML='<div class="queue-empty">Geen jobs in de wachtrij</div>';
+    } else {
+      ql.innerHTML=d.jobs.map((j,i)=>`<div class="job-row"><span class="job-num">#${i+1}</span><span class="job-name">${j}</span><span class="job-dot"></span></div>`).join('');
+    }
+  }catch(e){}
+}
+
+async function pollSystem(){
+  try{
+    const s=await fetch('/api/system').then(r=>r.json());
+    setDot('dot-airprint',s.airprint);
+    document.getElementById('sys-airprint').textContent=s.airprint?'Online':'Offline';
+
+    const net=s.network||{};
+    setDot('dot-network',net.connected);
+    const netLabel=net.type==='ethernet'?'Ethernet':'WiFi';
+    document.getElementById('sys-network').textContent=net.connected?`${netLabel} verbonden`:'Niet verbonden';
+
+    setDot('dot-cups',s.cups);
+    document.getElementById('sys-cups').textContent=s.cups?'Bereikbaar':'Offline';
+
+    const t=s.temp;
+    const tEl=document.getElementById('sys-temp');
+    const dEl=document.getElementById('dot-temp');
+    tEl.textContent=t!=null?t+'°C':'—';
+    if(t!=null){
+      if(t>=75){tEl.className='sys-val vr';dEl.className='sys-dot dot-r';}
+      else if(t>=60){tEl.className='sys-val vo';dEl.className='sys-dot dot-o';}
+      else{tEl.className='sys-val vg';dEl.className='sys-dot dot-g';}
+    }
+
+    const dk=s.disk||{};
+    document.getElementById('sys-disk').textContent=dk.used&&dk.total?`${dk.used} / ${dk.total}`:'—';
+    const db=document.getElementById('bar-disk');
+    db.style.width=(dk.pct||0)+'%';
+    db.className='mini-fill '+((dk.pct||0)>=90?'fr':(dk.pct||0)>=70?'fo':'fg');
+
+    document.getElementById('sys-uptime').textContent=s.uptime||'—';
+
+    const p=s.prints||{};
+    const r=s.rol||{};
+    document.getElementById('cnt-today').textContent=p.today??0;
+    document.getElementById('cnt-total').textContent=p.total??0;
+    document.getElementById('cnt-rol').textContent=r.since_roll??0;
+    document.getElementById('cnt-last').textContent=p.last||'—';
+
+    document.getElementById('qr-ip').textContent=`http://${s.ip||'—'}`;
+  }catch(e){}
+}
+
+pollPrinter();
+pollSystem();
+setInterval(pollPrinter,2000);
+setInterval(pollSystem,5000);
+</script>
+{% endblock %}

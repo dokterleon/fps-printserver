@@ -1,0 +1,10 @@
+PRINTER = "Flitshokje-CX02"
+APP_NAME = "Flitshokje Print Server"
+VERSION = "1.0.0"
+
+MODES = {
+    "4x6": ("w288h432", "4x6 / 10x15"),
+    "2x6": ("w288h432-div2", "2x6 x2 + CUT"),
+    "5x7": ("w360h504", "5x7"),
+    "6x8": ("w432h576", "6x8"),
+}

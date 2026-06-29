@@ -1,0 +1,14 @@
+body{margin:0;background:#05070d;color:white;font-family:Arial,Helvetica,sans-serif}
+header{background:#111827;padding:22px 26px;box-shadow:0 8px 24px #0008}
+h1{margin:0;font-size:28px} header span{color:#9ca3af}
+main{padding:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+.card,.panel{background:#1f2937;border-radius:20px;padding:22px;box-shadow:0 8px 20px #0005}
+.card small{display:block;color:#9ca3af;margin-bottom:8px}
+.card strong{font-size:24px}
+pre{white-space:pre-wrap;color:#d1d5db}
+.panel{margin-top:18px}
+.panel a{display:block;text-align:center;background:#2563eb;color:white;text-decoration:none;padding:17px;margin:10px 0;border-radius:15px;font-size:19px;font-weight:800}
+.panel a.ok{background:#16a34a}
+.panel a.warn{background:#ea580c}
+.panel a.bad{background:#dc2626}

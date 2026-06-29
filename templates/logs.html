@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+.log-filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.filter-btn{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--b2);background:transparent;color:var(--sub);cursor:pointer;transition:all .15s}
+.filter-btn:hover{background:var(--s2);color:var(--t)}
+.filter-btn.active{background:var(--yb);border-color:rgba(255,224,0,.3);color:var(--y)}
+.log-table{width:100%;border-collapse:collapse}
+.log-table th{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--b)}
+.log-table td{padding:9px 12px;border-bottom:1px solid var(--b);font-size:13px;vertical-align:middle}
+.log-table tr:last-child td{border-bottom:none}
+.log-table tr:hover td{background:rgba(255,255,255,.02)}
+.ev-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.ev-print{background:var(--y)}
+.ev-test{background:var(--green)}
+.ev-resume{background:var(--blue)}
+.ev-cancel{background:var(--red)}
+.ev-cups{background:var(--orange)}
+.ev-mode{background:var(--sub)}
+.ev-other{background:var(--muted)}
+.time-col{font-family:monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+.empty{color:var(--muted);text-align:center;padding:32px;font-size:13px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="log-filters">
+    <button class="filter-btn active" onclick="filter('all',this)">Alles</button>
+    <button class="filter-btn" onclick="filter('print',this)">Prints</button>
+    <button class="filter-btn" onclick="filter('resume',this)">Auto Resume</button>
+    <button class="filter-btn" onclick="filter('cups',this)">CUPS</button>
+    <button class="filter-btn" onclick="filter('mode',this)">Mode wijzigingen</button>
+    <button class="filter-btn" onclick="filter('test_print',this)">Test prints</button>
+  </div>
+
+  <div class="card">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>Tijd</th>
+          <th>Event</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody id="log-body">
+        <tr><td colspan="3" class="empty">Laden...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allLogs = [];
+let currentFilter = 'all';
+
+function evDot(ev){
+  const map={print:'ev-print',test_print:'ev-test',resume:'ev-resume',cancel:'ev-cancel',cups:'ev-cups',mode:'ev-mode'};
+  return map[ev]||'ev-other';
+}
+function evLabel(ev){
+  const map={print:'Print',test_print:'Test print',resume:'Resume',cancel:'Queue geleegd',cups:'CUPS',mode:'Mode'};
+  return map[ev]||ev;
+}
+
+function render(logs){
+  const tbody = document.getElementById('log-body');
+  const filtered = currentFilter==='all' ? logs : logs.filter(l=>l.event===currentFilter);
+  if(!filtered.length){
+    tbody.innerHTML='<tr><td colspan="3" class="empty">Geen logs gevonden</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(l=>`
+    <tr>
+      <td class="time-col">${l.time||'—'}</td>
+      <td><span class="ev-dot ${evDot(l.event)}"></span>${evLabel(l.event)}</td>
+      <td style="color:var(--sub)">${l.detail||'—'}</td>
+    </tr>`).join('');
+}
+
+function filter(type, btn){
+  currentFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render(allLogs);
+}
+
+async function loadLogs(){
+  try{
+    allLogs = await fetch('/api/logs').then(r=>r.json());
+    render(allLogs);
+  }catch(e){
+    document.getElementById('log-body').innerHTML='<tr><td colspan="3" class="empty">Kon logs niet laden</td></tr>';
+  }
+}
+
+loadLogs();
+setInterval(loadLogs, 5000);
+</script>
+{% endblock %}

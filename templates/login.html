@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inloggen — {{ app_name }}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#09090c;--s1:#111318;--s2:#181b22;--b:rgba(255,255,255,.07);--b2:rgba(255,255,255,.13);--t:#f0f0ee;--muted:#6b7280;--y:#FFE000;--red:#ef4444;--rb:rgba(239,68,68,.13)}
+body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.box{background:var(--s1);border:1px solid var(--b2);border-radius:16px;padding:36px 32px;width:100%;max-width:360px}
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.logo-name{font-size:16px;font-weight:700}
+.logo-ver{font-size:11px;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.field input{background:var(--s2);border:1px solid var(--b2);border-radius:8px;padding:10px 13px;color:var(--t);font-size:14px;outline:none;width:100%}
+.field input:focus{border-color:rgba(255,224,0,.4)}
+.btn{width:100%;padding:12px;border-radius:9px;font-size:14px;font-weight:700;background:var(--y);color:#0a0a00;border:none;cursor:pointer;margin-top:4px}
+.btn:hover{opacity:.88}
+.error{background:var(--rb);border:1px solid rgba(239,68,68,.25);color:var(--red);border-radius:8px;padding:10px 13px;font-size:13px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+      <rect width="36" height="36" rx="9" fill="#FFE000"/>
+      <path d="M14 7L9 20h7l-2 9 12-14h-7l3-8z" fill="#0a0a00"/>
+    </svg>
+    <div>
+      <div class="logo-name">Flitshokje</div>
+      <div class="logo-ver">Print Server</div>
+    </div>
+  </div>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="POST">
+    <div class="field">
+      <label>Wachtwoord</label>
+      <input type="password" name="password" autofocus placeholder="••••••••">
+    </div>
+    <button class="btn" type="submit">Inloggen</button>
+  </form>
+</div>
+</body>
+</html>
