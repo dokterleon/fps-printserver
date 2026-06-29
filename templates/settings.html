@@ -7,13 +7,32 @@
 .setting-desc{font-size:12px;color:var(--muted);margin-bottom:14px}
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
 .field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.field input{background:var(--s1);border:1px solid var(--b2);border-radius:8px;padding:9px 12px;color:var(--t);font-size:13px;outline:none;width:100%}
-.field input:focus{border-color:rgba(255,224,0,.4)}
+.field input,.field select{background:var(--s1);border:1px solid var(--b2);border-radius:8px;padding:9px 12px;color:var(--t);font-size:13px;outline:none;width:100%}
+.field input:focus,.field select:focus{border-color:rgba(255,224,0,.4)}
 .msg{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;background:var(--gb);color:var(--green);border:1px solid rgba(34,197,94,.2)}
 .info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--b);font-size:13px}
 .info-row:last-child{border-bottom:none}
 .info-label{color:var(--muted)}
 .info-val{font-family:monospace;color:var(--t)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--b)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-label{font-size:13px;color:var(--t)}
+.toggle-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:var(--b2);border-radius:11px;transition:background .2s;cursor:pointer}
+.toggle input:checked+.toggle-track{background:var(--y)}
+.toggle-thumb{position:absolute;width:16px;height:16px;background:white;border-radius:50%;top:3px;left:3px;transition:transform .2s;pointer-events:none}
+.toggle input:checked~.toggle-thumb{transform:translateX(18px)}
+
+/* update card */
+.update-status{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;border:1px solid var(--b)}
+.update-checking{background:var(--s1);color:var(--muted)}
+.update-available{background:var(--yb);color:var(--y);border-color:rgba(255,224,0,.2)}
+.update-current{background:var(--gb);color:var(--green);border-color:rgba(34,197,94,.2)}
+.update-error{background:var(--rb);color:var(--red);border-color:rgba(239,68,68,.2)}
+.update-detail{font-size:11px;margin-top:4px;opacity:.7}
+
 @media(max-width:640px){.settings-grid{grid-template-columns:1fr}}
 </style>
 {% endblock %}
@@ -21,71 +40,122 @@
 {% block content %}
 <div class="page">
 
-  {% if msg %}
-  <div class="msg">✓ {{ msg }}</div>
-  {% endif %}
+  {% if msg %}<div class="msg">✓ {{ msg }}</div>{% endif %}
 
   <div class="settings-grid">
 
     <!-- Systeem info -->
     <div class="setting-card">
-      <div class="setting-title">Systeem info</div>
-      <div class="setting-desc">Huidige configuratie van de print server</div>
+      <div class="setting-title">{% if lang == 'en' %}System info{% else %}Systeem info{% endif %}</div>
+      <div class="setting-desc">{% if lang == 'en' %}Current print server configuration{% else %}Huidige configuratie van de print server{% endif %}</div>
       <div class="info-row"><span class="info-label">Hostname</span><span class="info-val">{{ sys.hostname }}</span></div>
-      <div class="info-row"><span class="info-label">IP-adres</span><span class="info-val">{{ sys.ip }}</span></div>
-      <div class="info-row"><span class="info-label">Versie</span><span class="info-val">v{{ version }}</span></div>
+      <div class="info-row"><span class="info-label">IP</span><span class="info-val">{{ sys.ip }}</span></div>
+      <div class="info-row"><span class="info-label">{% if lang == 'en' %}Version{% else %}Versie{% endif %}</span><span class="info-val">v{{ version }}</span></div>
       <div class="info-row"><span class="info-label">Uptime</span><span class="info-val">{{ sys.uptime }}</span></div>
-      <div class="info-row"><span class="info-label">CPU temp</span><span class="info-val">{{ sys.temp }}°C</span></div>
+      <div class="info-row"><span class="info-label">{% if lang == 'en' %}CPU temp{% else %}CPU temp{% endif %}</span><span class="info-val">{{ sys.temp }}°C</span></div>
+    </div>
+
+    <!-- Algemeen -->
+    <div class="setting-card">
+      <div class="setting-title">{% if lang == 'en' %}General{% else %}Algemeen{% endif %}</div>
+      <div class="setting-desc">{% if lang == 'en' %}Behaviour and language settings{% else %}Gedrag en taalinstellingen{% endif %}</div>
+      <form method="POST">
+        <input type="hidden" name="action" value="general">
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Auto Resume</div>
+            <div class="toggle-sub">{% if lang == 'en' %}Automatically resume after paper reload{% else %}Automatisch hervatten na papier wissel{% endif %}</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" name="auto_resume" {% if settings.auto_resume %}checked{% endif %}>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Auto Update</div>
+            <div class="toggle-sub">{% if lang == 'en' %}Install updates automatically at 03:00{% else %}Updates automatisch installeren om 03:00{% endif %}</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" name="auto_update" {% if settings.auto_update %}checked{% endif %}>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label>{% if lang == 'en' %}Language{% else %}Taal{% endif %}</label>
+          <select name="language">
+            <option value="nl" {% if settings.language == 'nl' %}selected{% endif %}>🇳🇱 Nederlands</option>
+            <option value="en" {% if settings.language == 'en' %}selected{% endif %}>🇬🇧 English</option>
+          </select>
+        </div>
+        <button class="btn by" type="submit">{% if lang == 'en' %}Save{% else %}Opslaan{% endif %}</button>
+      </form>
+    </div>
+
+    <!-- Updates -->
+    <div class="setting-card">
+      <div class="setting-title">{% if lang == 'en' %}Updates{% else %}Updates{% endif %}</div>
+      <div class="setting-desc">{% if lang == 'en' %}Check for and install new versions{% else %}Controleer op en installeer nieuwe versies{% endif %}</div>
+      <div class="update-status update-checking" id="update-status">
+        ⏳ {% if lang == 'en' %}Checking...{% else %}Controleren...{% endif %}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn bgh" onclick="checkUpdate()">🔍 {% if lang == 'en' %}Check{% else %}Controleer{% endif %}</button>
+        <button class="btn by" id="btn-install" style="display:none" onclick="doUpdate()">⬇ {% if lang == 'en' %}Install update{% else %}Installeer update{% endif %}</button>
+      </div>
+      <div id="update-output" style="margin-top:10px;font-size:11px;font-family:monospace;color:var(--muted);white-space:pre-wrap"></div>
     </div>
 
     <!-- Hostname -->
     <div class="setting-card">
-      <div class="setting-title">Hostname wijzigen</div>
-      <div class="setting-desc">De naam van deze Pi op het netwerk</div>
+      <div class="setting-title">{% if lang == 'en' %}Rename device{% else %}Hostname wijzigen{% endif %}</div>
+      <div class="setting-desc">{% if lang == 'en' %}The name of this Pi on the network{% else %}De naam van deze Pi op het netwerk{% endif %}</div>
       <form method="POST">
         <input type="hidden" name="action" value="hostname">
         <div class="field">
-          <label>Nieuwe hostname</label>
-          <input type="text" name="hostname" value="{{ sys.hostname }}" placeholder="flitshokje-print" maxlength="32">
+          <label>{% if lang == 'en' %}New hostname{% else %}Nieuwe hostname{% endif %}</label>
+          <input type="text" name="hostname" value="{{ sys.hostname }}" maxlength="32">
         </div>
-        <button class="btn by" type="submit">Opslaan</button>
+        <button class="btn by" type="submit">{% if lang == 'en' %}Save{% else %}Opslaan{% endif %}</button>
       </form>
     </div>
 
     <!-- Wachtwoord -->
     <div class="setting-card">
-      <div class="setting-title">Dashboard beveiliging</div>
-      <div class="setting-desc">Stel een wachtwoord in zodat alleen jij het dashboard kan openen</div>
+      <div class="setting-title">{% if lang == 'en' %}Security{% else %}Beveiliging{% endif %}</div>
+      <div class="setting-desc">{% if lang == 'en' %}Password protect the dashboard{% else %}Dashboard beveiligen met wachtwoord{% endif %}</div>
       {% if auth_enabled %}
-      <div class="msg" style="background:var(--gb);color:var(--green)">✓ Wachtwoord is actief</div>
+      <div class="msg">✓ {% if lang == 'en' %}Password is active{% else %}Wachtwoord is actief{% endif %}</div>
       {% endif %}
       <form method="POST">
         <input type="hidden" name="action" value="password">
         <div class="field">
-          <label>Nieuw wachtwoord</label>
+          <label>{% if lang == 'en' %}New password{% else %}Nieuw wachtwoord{% endif %}</label>
           <input type="password" name="password" placeholder="••••••••">
         </div>
         <div class="field">
-          <label>Herhaal wachtwoord</label>
+          <label>{% if lang == 'en' %}Repeat password{% else %}Herhaal wachtwoord{% endif %}</label>
           <input type="password" name="password2" placeholder="••••••••">
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn by" type="submit">Wachtwoord instellen</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn by" type="submit">{% if lang == 'en' %}Set password{% else %}Wachtwoord instellen{% endif %}</button>
           {% if auth_enabled %}
-          <button class="btn br" type="submit" formaction="/settings" onclick="this.form.action.value='disable_password'">Uitschakelen</button>
+          <button class="btn br" type="button" onclick="disablePassword()">{% if lang == 'en' %}Disable{% else %}Uitschakelen{% endif %}</button>
           {% endif %}
         </div>
       </form>
     </div>
 
-    <!-- CUPS beheer -->
+    <!-- CUPS -->
     <div class="setting-card">
-      <div class="setting-title">CUPS beheer</div>
-      <div class="setting-desc">Directe printer acties</div>
+      <div class="setting-title">{% if lang == 'en' %}Printer actions{% else %}Printer acties{% endif %}</div>
+      <div class="setting-desc">{% if lang == 'en' %}Direct CUPS controls{% else %}Directe CUPS bediening{% endif %}</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <a class="btn bg" href="/resume">▶ Resume printer</a>
-        <a class="btn bo" href="/restart-cups" onclick="return confirm('CUPS herstarten?')">🔄 Restart CUPS</a>
-        <a class="btn br" href="/cancel" onclick="return confirm('Alle jobs annuleren?')">🗑 Wis wachtrij</a>
+        <a class="btn bg" href="/resume">▶ {% if lang == 'en' %}Resume printer{% else %}Resume printer{% endif %}</a>
+        <a class="btn bo" href="/restart-cups" onclick="return confirm('{% if lang == 'en' %}Restart CUPS?{% else %}CUPS herstarten?{% endif %}')">🔄 Restart CUPS</a>
+        <a class="btn br" href="/cancel" onclick="return confirm('{% if lang == 'en' %}Cancel all jobs?{% else %}Alle jobs annuleren?{% endif %}')">🗑 {% if lang == 'en' %}Clear queue{% else %}Wis wachtrij{% endif %}</a>
       </div>
     </div>
 
@@ -95,12 +165,65 @@
 
 {% block scripts %}
 <script>
-// fix disable password button
-document.querySelectorAll('button[onclick*="disable_password"]').forEach(btn => {
-  btn.addEventListener('click', function(e){
-    if(!confirm('Wachtwoord uitschakelen?')){e.preventDefault();return;}
-    this.closest('form').querySelector('[name=action]').value='disable_password';
-  });
-});
+async function checkUpdate(){
+  const el = document.getElementById('update-status');
+  el.className='update-status update-checking';
+  el.innerHTML='⏳ Controleren...';
+  document.getElementById('btn-install').style.display='none';
+  try{
+    const d = await fetch('/api/check-update').then(r=>r.json());
+    if(d.status==='update_available'){
+      el.className='update-status update-available';
+      el.innerHTML=`⬇ ${d.message}<div class="update-detail">${d.remote?.message||''} · ${d.remote?.date||''}</div>`;
+      document.getElementById('btn-install').style.display='inline-flex';
+    } else if(d.status==='up_to_date'){
+      el.className='update-status update-current';
+      el.innerHTML=`✓ ${d.message} (v${d.local?.version||''})`;
+    } else {
+      el.className='update-status update-error';
+      el.innerHTML=`✕ ${d.message}`;
+    }
+  }catch(e){
+    el.className='update-status update-error';
+    el.innerHTML='✕ Controleren mislukt';
+  }
+}
+
+async function doUpdate(){
+  const el  = document.getElementById('update-status');
+  const out = document.getElementById('update-output');
+  el.className='update-status update-checking';
+  el.innerHTML='⏳ Update installeren...';
+  document.getElementById('btn-install').style.display='none';
+  try{
+    const d = await fetch('/api/do-update',{method:'POST'}).then(r=>r.json());
+    if(d.success){
+      el.className='update-status update-current';
+      el.innerHTML='✓ '+d.message;
+      out.textContent=d.output;
+    } else {
+      el.className='update-status update-error';
+      el.innerHTML='✕ '+d.message;
+      out.textContent=d.output;
+    }
+  }catch(e){
+    el.className='update-status update-error';
+    el.innerHTML='✕ Update mislukt';
+  }
+}
+
+function disablePassword(){
+  if(!confirm('Wachtwoord uitschakelen?')) return;
+  const form=document.createElement('form');
+  form.method='POST';
+  const inp=document.createElement('input');
+  inp.type='hidden';inp.name='action';inp.value='disable_password';
+  form.appendChild(inp);
+  document.body.appendChild(form);
+  form.submit();
+}
+
+// check update automatisch bij laden
+checkUpdate();
 </script>
 {% endblock %}

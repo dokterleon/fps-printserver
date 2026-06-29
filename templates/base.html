@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="nl">
+<html lang="{{ lang or 'nl' }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -18,39 +18,31 @@
   --r:10px;
 }
 body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;min-height:100vh}
-
-/* topbar */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:58px;background:var(--s1);border-bottom:1px solid var(--b);position:sticky;top:0;z-index:10}
 .logo{display:flex;align-items:center;gap:12px;text-decoration:none}
-.logo-svg{flex-shrink:0}
-.logo-text{display:flex;flex-direction:column}
 .logo-name{font-size:15px;font-weight:700;color:var(--t);letter-spacing:-.01em}
 .logo-ver{font-size:10px;color:var(--muted);letter-spacing:.03em}
 .topbar-center{display:flex;gap:4px}
 .nav-link{padding:6px 12px;border-radius:8px;font-size:13px;color:var(--sub);text-decoration:none;transition:background .15s,color .15s}
 .nav-link:hover{background:var(--s2);color:var(--t)}
 .nav-link.active{background:var(--yb);color:var(--y);font-weight:600}
-.topbar-right{display:flex;align-items:center;gap:8px}
+.topbar-right{display:flex;align-items:center;gap:6px}
 .chip{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap}
 .cy{background:var(--yb);color:var(--y)}
 .cg{background:var(--gb);color:var(--green)}
 .cr{background:var(--rb);color:var(--red)}
 .co{background:var(--ob);color:var(--orange)}
-.cb{background:var(--bb);color:var(--blue)}
-
+.lang-btn{padding:4px 8px;border-radius:6px;font-size:11px;color:var(--muted);text-decoration:none;border:1px solid var(--b);transition:all .15s}
+.lang-btn:hover{border-color:var(--b2);color:var(--t)}
+.logout-btn{font-size:12px;color:var(--muted);text-decoration:none;padding:4px 8px}
+.logout-btn:hover{color:var(--t)}
 .pbar{height:2px;background:var(--b)}
 .pbar-fill{height:100%;background:var(--y);width:0%;transition:width .5s}
-
 .page{max-width:920px;margin:0 auto;padding:24px 20px 52px}
 .section-title{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:10px}
-
-/* banner waarschuwing */
 .banner{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--r);margin-bottom:16px;font-size:13px;font-weight:500}
 .banner-orange{background:var(--ob);border:1px solid rgba(245,158,11,.25);color:var(--orange)}
 .banner-red{background:var(--rb);border:1px solid rgba(239,68,68,.25);color:var(--red)}
-.banner-green{background:var(--gb);border:1px solid rgba(34,197,94,.2);color:var(--green)}
-
-/* knoppen */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;transition:opacity .15s,transform .1s;white-space:nowrap;border:none}
 .btn:hover{opacity:.82}.btn:active{transform:scale(.97)}
 .by{background:var(--y);color:#0a0a00}
@@ -59,10 +51,7 @@ body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSyste
 .br{background:var(--red);color:#fff}
 .bgh{background:transparent;border:1px solid var(--b2);color:var(--sub)}
 .bgh:hover{background:var(--s2);color:var(--t)}
-
-/* cards */
 .card{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);padding:16px}
-
 @media(max-width:640px){
   .topbar-center{display:none}
   .logo-ver{display:none}
@@ -75,30 +64,37 @@ body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSyste
 
 <div class="topbar">
   <a class="logo" href="/">
-    <!-- FPS Logo SVG -->
-    <svg class="logo-svg" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="34" height="34" viewBox="0 0 36 36" fill="none">
       <rect width="36" height="36" rx="9" fill="#FFE000"/>
       <path d="M14 7L9 20h7l-2 9 12-14h-7l3-8z" fill="#0a0a00"/>
     </svg>
-    <div class="logo-text">
+    <div>
       <div class="logo-name">Flitshokje</div>
       <div class="logo-ver">Print Server v{{ version }}</div>
     </div>
   </a>
 
   <nav class="topbar-center">
-    <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Dashboard</a>
-    <a class="nav-link {% if request.path == '/settings' %}active{% endif %}" href="/settings">Instellingen</a>
-    <a class="nav-link {% if request.path == '/logs' %}active{% endif %}" href="/logs">Logs</a>
+    <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
+      {% if lang == 'en' %}Dashboard{% else %}Dashboard{% endif %}
+    </a>
+    <a class="nav-link {% if request.path == '/settings' %}active{% endif %}" href="/settings">
+      {% if lang == 'en' %}Settings{% else %}Instellingen{% endif %}
+    </a>
+    <a class="nav-link {% if request.path == '/logs' %}active{% endif %}" href="/logs">
+      {% if lang == 'en' %}Logs{% else %}Logs{% endif %}
+    </a>
   </nav>
 
   <div class="topbar-right">
-    <span class="chip" id="chip-internet">● Internet</span>
     <span class="chip" id="chip-airprint">● AirPrint</span>
-    <span class="chip" id="chip-state">● Laden</span>
-    {% if request.path != '/login' %}
-    <a href="/logout" style="font-size:12px;color:var(--muted);text-decoration:none;margin-left:4px">Uitloggen</a>
+    <span class="chip" id="chip-state">● {% if lang == 'en' %}Loading{% else %}Laden{% endif %}</span>
+    {% if lang == 'en' %}
+      <a class="lang-btn" href="/lang/nl">🇳🇱</a>
+    {% else %}
+      <a class="lang-btn" href="/lang/en">🇬🇧</a>
     {% endif %}
+    <a class="logout-btn" href="/logout">{% if lang == 'en' %}Logout{% else %}Uitloggen{% endif %}</a>
   </div>
 </div>
 <div class="pbar"><div class="pbar-fill" id="pbar"></div></div>
@@ -112,26 +108,15 @@ async function pollChips(){
       fetch('/api/status').then(r=>r.json()),
       fetch('/api/system').then(r=>r.json()),
     ]);
-
-    // printer state chip
     const chip = document.getElementById('chip-state');
     const l = (ps.state||'').toLowerCase();
     if(l.includes('print')){chip.className='chip cy';chip.textContent='⚡ Printing';}
-    else if(l.includes('error')||l.includes('paus')){chip.className='chip cr';chip.textContent='✕ Fout';}
-    else{chip.className='chip cg';chip.textContent='● Gereed';}
-
-    document.getElementById('pbar').style.width = l.includes('print')?'60%':'0%';
-
-    // internet
-    const ic = document.getElementById('chip-internet');
-    ic.className='chip '+(ss.internet?'cg':'cr');
-    ic.textContent=(ss.internet?'● ':'✕ ')+'Internet';
-
-    // airprint
-    const ac = document.getElementById('chip-airprint');
+    else if(l.includes('error')||l.includes('paus')){chip.className='chip cr';chip.textContent='✕ {% if lang == "en" %}Error{% else %}Fout{% endif %}';}
+    else{chip.className='chip cg';chip.textContent='● {% if lang == "en" %}Ready{% else %}Gereed{% endif %}';}
+    document.getElementById('pbar').style.width=l.includes('print')?'60%':'0%';
+    const ac=document.getElementById('chip-airprint');
     ac.className='chip '+(ss.airprint?'cg':'cr');
     ac.textContent=(ss.airprint?'● ':'✕ ')+'AirPrint';
-
   }catch(e){
     const c=document.getElementById('chip-state');
     c.className='chip cr';c.textContent='✕ Offline';
