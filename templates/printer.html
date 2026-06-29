@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:13px;margin-bottom:18px}
+.back:hover{color:var(--t)}
+.printer-header{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.ph-icon{width:52px;height:52px;border-radius:12px;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:26px;border:1px solid var(--b)}
+.ph-name{font-size:20px;font-weight:700}
+.ph-brand{font-size:12px;color:var(--muted);margin-top:2px}
+.ph-state{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot-g{background:var(--green)}.dot-r{background:var(--red)}.dot-o{background:var(--orange)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.dot-pulse{animation:pulse 1.8s infinite}
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);padding:14px 16px}
+.stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px}
+.stat-val{font-size:21px;font-weight:700;line-height:1.1}
+.vy{color:var(--y)}.vg{color:var(--green)}.vr{color:var(--red)}
+.stat-hint{font-size:11px;color:var(--muted);margin-top:3px}
+.mode-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px}
+.mode-btn{display:flex;flex-direction:column;align-items:center;padding:18px 14px;border-radius:12px;background:var(--s2);border:2px solid var(--b2);text-decoration:none;color:var(--sub);transition:all .2s;text-align:center;position:relative}
+.mode-btn:hover{background:var(--s3);border-color:rgba(255,224,0,.25);color:var(--t)}
+.mode-btn.active{background:var(--yb);border-color:rgba(255,224,0,.5);color:var(--y)}
+.mode-name{font-size:14px;font-weight:700;margin-bottom:3px}
+.mode-desc{font-size:11px;color:var(--muted)}
+.mode-btn.active .mode-desc{color:rgba(255,224,0,.55)}
+.mode-badge{position:absolute;top:8px;right:8px;background:var(--y);color:#0a0a00;font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;opacity:0}
+.mode-btn.active .mode-badge{opacity:1}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.queue-empty{color:var(--muted);font-size:13px;padding:6px 0}
+.job-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b);font-size:13px}
+.job-row:last-child{border-bottom:none}
+.job-num{font-family:monospace;font-size:11px;color:var(--muted);width:32px}
+.job-name{flex:1;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.job-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0;animation:pulse 1.8s infinite}
+.marker-bar{height:6px;background:var(--b2);border-radius:3px;margin-top:6px;overflow:hidden}
+.marker-fill{height:100%;border-radius:3px;background:var(--green);transition:width .5s}
+@media(max-width:640px){.stats4{grid-template-columns:1fr 1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <a class="back" href="/">← {% if lang == 'en' %}Back to dashboard{% else %}Terug naar dashboard{% endif %}</a>
+
+  <div class="printer-header">
+    <div class="ph-icon">🖨</div>
+    <div>
+      <div class="ph-name" id="ph-name">{{ printer_name }}</div>
+      <div class="ph-brand" id="ph-brand">—</div>
+    </div>
+    <div class="ph-state">
+      <span class="dot" id="ph-dot"></span>
+      <span id="ph-state">—</span>
+    </div>
+  </div>
+
+  <div id="ph-banner"></div>
+
+  <div class="section-title">{% if lang == 'en' %}Status{% else %}Status{% endif %}</div>
+  <div class="stats4">
+    <div class="stat"><div class="stat-label">{% if lang == 'en' %}State{% else %}Toestand{% endif %}</div><div class="stat-val" id="s-state">—</div></div>
+    <div class="stat"><div class="stat-label">Media</div><div class="stat-val" style="font-size:14px" id="s-media">—</div></div>
+    <div class="stat">
+      <div class="stat-label">{% if lang == 'en' %}Remaining{% else %}Resterend{% endif %}</div>
+      <div class="stat-val vy" id="s-remaining">—</div>
+      <div class="marker-bar"><div class="marker-fill" id="s-marker" style="width:0%"></div></div>
+    </div>
+    <div class="stat"><div class="stat-label">Queue</div><div class="stat-val" id="s-qcount">0</div><div class="stat-hint">jobs</div></div>
+  </div>
+
+  <div class="section-title">{% if lang == 'en' %}Print mode{% else %}Print mode{% endif %}</div>
+  <div class="mode-grid" id="mode-grid">—</div>
+
+  <div class="section-title">{% if lang == 'en' %}Actions{% else %}Acties{% endif %}</div>
+  <div class="actions">
+    <a class="btn by" href="/test-print/{{ printer_name }}">🖨 {% if lang == 'en' %}Test print{% else %}Test print{% endif %}</a>
+    <a class="btn bg" href="/resume/{{ printer_name }}">▶ Resume</a>
+    <a class="btn br" href="/cancel/{{ printer_name }}" onclick="return confirm('{% if lang == 'en' %}Cancel all jobs?{% else %}Alle jobs annuleren?{% endif %}')">🗑 {% if lang == 'en' %}Clear queue{% else %}Wis queue{% endif %}</a>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-title">Queue</div>
+    <div id="queue-list"><div class="queue-empty">{% if lang == 'en' %}No jobs{% else %}Geen jobs{% endif %}</div></div>
+  </div>
+
+  <details style="background:var(--s2);border:1px solid var(--b);border-radius:var(--r);overflow:hidden">
+    <summary style="padding:12px 16px;font-size:12px;color:var(--muted);cursor:pointer">{% if lang == 'en' %}Raw CUPS status{% else %}Ruwe CUPS status{% endif %}</summary>
+    <pre id="raw-status" style="padding:0 16px 14px;font-size:11px;color:var(--muted);font-family:monospace;white-space:pre-wrap;word-break:break-all">—</pre>
+  </details>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PRINTER = "{{ printer_name }}";
+
+function stateColor(s){
+  if(s==='Printing') return 'dot-o dot-pulse';
+  if(s==='Paused/Error') return 'dot-r';
+  return 'dot-g';
+}
+
+async function poll(){
+  try{
+    const d = await fetch(`/api/printer/${PRINTER}`).then(r=>r.json());
+
+    document.getElementById('ph-name').textContent  = d.printer;
+    document.getElementById('ph-brand').textContent = (d.brand||'').toUpperCase();
+    document.getElementById('ph-dot').className     = 'dot '+stateColor(d.state);
+    document.getElementById('ph-state').textContent = d.state||'—';
+
+    const l=(d.state||'').toLowerCase();
+    const sc=l.includes('print')?'vy':l.includes('error')||l.includes('paus')?'vr':'vg';
+    document.getElementById('s-state').textContent  = d.friendly_error||d.state||'—';
+    document.getElementById('s-state').className    = 'stat-val '+sc;
+    document.getElementById('s-media').textContent  = d.media||'—';
+    document.getElementById('s-remaining').textContent = d.remaining||'—';
+    document.getElementById('s-qcount').textContent = d.job_count??0;
+    document.getElementById('raw-status').textContent = d.raw_status||'—';
+
+    if(d.marker_level!=null)
+      document.getElementById('s-marker').style.width = d.marker_level+'%';
+
+    // banner
+    const bEl = document.getElementById('ph-banner');
+    if(d.friendly_error)
+      bEl.innerHTML=`<div class="banner banner-red" style="margin-bottom:16px">⚠️ ${d.friendly_error}</div>`;
+    else if(d.low_paper)
+      bEl.innerHTML=`<div class="banner banner-orange" style="margin-bottom:16px">⚠️ Nog ${d.remaining} prints resterend</div>`;
+    else bEl.innerHTML='';
+
+    // modes
+    const modes = d.modes||{};
+    const mg = document.getElementById('mode-grid');
+    if(Object.keys(modes).length){
+      mg.innerHTML = Object.entries(modes).map(([key,m])=>`
+        <a class="mode-btn ${d.current_mode===key?'active':''}" href="/mode/${PRINTER}/${key}">
+          <span class="mode-badge">✓</span>
+          <div class="mode-name">${m.label}</div>
+          <div class="mode-desc">${m.desc}</div>
+        </a>`).join('');
+    } else {
+      mg.innerHTML='<div style="color:var(--muted);font-size:13px">Geen modes beschikbaar</div>';
+    }
+
+    // queue
+    const ql = document.getElementById('queue-list');
+    if(!d.jobs||!d.jobs.length){
+      ql.innerHTML='<div class="queue-empty">Geen jobs in de wachtrij</div>';
+    } else {
+      ql.innerHTML=d.jobs.map((j,i)=>`
+        <div class="job-row">
+          <span class="job-num">#${i+1}</span>
+          <span class="job-name">${j}</span>
+          <span class="job-dot"></span>
+        </div>`).join('');
+    }
+  }catch(e){}
+}
+
+poll();
+setInterval(poll,2000);
+</script>
+{% endblock %}

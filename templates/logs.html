@@ -1,4 +1,26 @@
 {% extends "base.html" %}
+{% set t = {
+  'nl': {
+    'all': 'Alles', 'prints': 'Prints', 'resume': 'Auto Resume',
+    'cups': 'CUPS', 'mode': 'Mode wijzigingen', 'test': 'Test prints',
+    'time': 'Tijd', 'event': 'Event', 'detail': 'Detail',
+    'no_logs': 'Geen logs gevonden', 'loading': 'Laden...',
+    'ev_print': 'Print', 'ev_test': 'Test print', 'ev_resume': 'Resume',
+    'ev_cancel': 'Queue geleegd', 'ev_cups': 'CUPS', 'ev_mode': 'Mode',
+    'ev_update': 'Update',
+  },
+  'en': {
+    'all': 'All', 'prints': 'Prints', 'resume': 'Auto Resume',
+    'cups': 'CUPS', 'mode': 'Mode changes', 'test': 'Test prints',
+    'time': 'Time', 'event': 'Event', 'detail': 'Detail',
+    'no_logs': 'No logs found', 'loading': 'Loading...',
+    'ev_print': 'Print', 'ev_test': 'Test print', 'ev_resume': 'Resume',
+    'ev_cancel': 'Queue cleared', 'ev_cups': 'CUPS', 'ev_mode': 'Mode',
+    'ev_update': 'Update',
+  }
+} %}
+{% set _ = t[lang or 'nl'] %}
+
 {% block head %}
 <style>
 .log-filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
@@ -11,13 +33,9 @@
 .log-table tr:last-child td{border-bottom:none}
 .log-table tr:hover td{background:rgba(255,255,255,.02)}
 .ev-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle}
-.ev-print{background:var(--y)}
-.ev-test{background:var(--green)}
-.ev-resume{background:var(--blue)}
-.ev-cancel{background:var(--red)}
-.ev-cups{background:var(--orange)}
-.ev-mode{background:var(--sub)}
-.ev-other{background:var(--muted)}
+.ev-print{background:var(--y)}.ev-test{background:var(--green)}.ev-resume{background:var(--blue)}
+.ev-cancel{background:var(--red)}.ev-cups{background:var(--orange)}.ev-mode{background:var(--sub)}
+.ev-update{background:var(--blue)}.ev-other{background:var(--muted)}
 .time-col{font-family:monospace;font-size:11px;color:var(--muted);white-space:nowrap}
 .empty{color:var(--muted);text-align:center;padding:32px;font-size:13px}
 </style>
@@ -25,65 +43,68 @@
 
 {% block content %}
 <div class="page">
-
   <div class="log-filters">
-    <button class="filter-btn active" onclick="filter('all',this)">Alles</button>
-    <button class="filter-btn" onclick="filter('print',this)">Prints</button>
-    <button class="filter-btn" onclick="filter('resume',this)">Auto Resume</button>
-    <button class="filter-btn" onclick="filter('cups',this)">CUPS</button>
-    <button class="filter-btn" onclick="filter('mode',this)">Mode wijzigingen</button>
-    <button class="filter-btn" onclick="filter('test_print',this)">Test prints</button>
+    <button class="filter-btn active" onclick="filter('all',this)">{{ _['all'] }}</button>
+    <button class="filter-btn" onclick="filter('print',this)">{{ _['prints'] }}</button>
+    <button class="filter-btn" onclick="filter('resume',this)">{{ _['resume'] }}</button>
+    <button class="filter-btn" onclick="filter('cups',this)">{{ _['cups'] }}</button>
+    <button class="filter-btn" onclick="filter('mode',this)">{{ _['mode'] }}</button>
+    <button class="filter-btn" onclick="filter('test_print',this)">{{ _['test'] }}</button>
   </div>
-
   <div class="card">
     <table class="log-table">
       <thead>
         <tr>
-          <th>Tijd</th>
-          <th>Event</th>
-          <th>Detail</th>
+          <th>{{ _['time'] }}</th>
+          <th>{{ _['event'] }}</th>
+          <th>{{ _['detail'] }}</th>
         </tr>
       </thead>
       <tbody id="log-body">
-        <tr><td colspan="3" class="empty">Laden...</td></tr>
+        <tr><td colspan="3" class="empty">{{ _['loading'] }}</td></tr>
       </tbody>
     </table>
   </div>
-
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-let allLogs = [];
-let currentFilter = 'all';
+const EV = {
+  print:      "{{ _['ev_print'] }}",
+  test_print: "{{ _['ev_test'] }}",
+  resume:     "{{ _['ev_resume'] }}",
+  cancel:     "{{ _['ev_cancel'] }}",
+  cups:       "{{ _['ev_cups'] }}",
+  mode:       "{{ _['ev_mode'] }}",
+  update:     "{{ _['ev_update'] }}",
+};
+const NO_LOGS  = "{{ _['no_logs'] }}";
+
+let allLogs=[], currentFilter='all';
 
 function evDot(ev){
-  const map={print:'ev-print',test_print:'ev-test',resume:'ev-resume',cancel:'ev-cancel',cups:'ev-cups',mode:'ev-mode'};
+  const map={print:'ev-print',test_print:'ev-test',resume:'ev-resume',cancel:'ev-cancel',cups:'ev-cups',mode:'ev-mode',update:'ev-update'};
   return map[ev]||'ev-other';
-}
-function evLabel(ev){
-  const map={print:'Print',test_print:'Test print',resume:'Resume',cancel:'Queue geleegd',cups:'CUPS',mode:'Mode'};
-  return map[ev]||ev;
 }
 
 function render(logs){
-  const tbody = document.getElementById('log-body');
-  const filtered = currentFilter==='all' ? logs : logs.filter(l=>l.event===currentFilter);
+  const tbody=document.getElementById('log-body');
+  const filtered=currentFilter==='all'?logs:logs.filter(l=>l.event===currentFilter);
   if(!filtered.length){
-    tbody.innerHTML='<tr><td colspan="3" class="empty">Geen logs gevonden</td></tr>';
+    tbody.innerHTML=`<tr><td colspan="3" class="empty">${NO_LOGS}</td></tr>`;
     return;
   }
-  tbody.innerHTML = filtered.map(l=>`
+  tbody.innerHTML=filtered.map(l=>`
     <tr>
       <td class="time-col">${l.time||'—'}</td>
-      <td><span class="ev-dot ${evDot(l.event)}"></span>${evLabel(l.event)}</td>
+      <td><span class="ev-dot ${evDot(l.event)}"></span>${EV[l.event]||l.event}</td>
       <td style="color:var(--sub)">${l.detail||'—'}</td>
     </tr>`).join('');
 }
 
-function filter(type, btn){
-  currentFilter = type;
+function filter(type,btn){
+  currentFilter=type;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   render(allLogs);
@@ -91,14 +112,13 @@ function filter(type, btn){
 
 async function loadLogs(){
   try{
-    allLogs = await fetch('/api/logs').then(r=>r.json());
+    allLogs=await fetch('/api/logs').then(r=>r.json());
     render(allLogs);
   }catch(e){
-    document.getElementById('log-body').innerHTML='<tr><td colspan="3" class="empty">Kon logs niet laden</td></tr>';
+    document.getElementById('log-body').innerHTML=`<tr><td colspan="3" class="empty">${NO_LOGS}</td></tr>`;
   }
 }
-
 loadLogs();
-setInterval(loadLogs, 5000);
+setInterval(loadLogs,5000);
 </script>
 {% endblock %}

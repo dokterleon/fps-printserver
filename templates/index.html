@@ -1,24 +1,83 @@
 {% extends "base.html" %}
+{% set t = {
+  'nl': {
+    'printer_overview': 'Printers', 'status': 'Status', 'media': 'Media',
+    'remaining': 'Resterend', 'remaining_hint': 'prints in rol',
+    'queue_label': 'Wachtrij', 'queue_hint': 'jobs',
+    'actions': 'Acties', 'test_print': 'Test', 'resume': 'Resume',
+    'clear_queue': 'Wis queue', 'manage': 'Beheer',
+    'system': 'Systeem', 'airprint': 'AirPrint', 'network': 'Netwerk',
+    'cups': 'CUPS', 'cpu_temp': 'CPU temp', 'disk': 'Schijf', 'uptime': 'Uptime',
+    'online': 'Online', 'offline': 'Offline', 'connected': 'verbonden',
+    'not_connected': 'Niet verbonden', 'reachable': 'Bereikbaar',
+    'stats': 'Statistieken', 'today': 'Vandaag', 'total': 'Totaal ooit',
+    'since_roll': 'Sinds rol wissel', 'last_print': 'Laatste print',
+    'new_roll': 'Nieuwe rol', 'connect': 'Verbinden',
+    'qr_hint': 'Scan QR of typ het adres in je browser',
+    'raw_cups': 'Ruwe CUPS status', 'ready': 'Gereed',
+    'no_printers': 'Geen printers gevonden',
+    'cups_restart': 'CUPS herstarten?',
+    'cancel_confirm': 'Alle jobs annuleren?',
+    'roll_confirm': 'Nieuwe rol — teller resetten?',
+  },
+  'en': {
+    'printer_overview': 'Printers', 'status': 'Status', 'media': 'Media',
+    'remaining': 'Remaining', 'remaining_hint': 'prints in roll',
+    'queue_label': 'Queue', 'queue_hint': 'jobs',
+    'actions': 'Actions', 'test_print': 'Test', 'resume': 'Resume',
+    'clear_queue': 'Clear queue', 'manage': 'Manage',
+    'system': 'System', 'airprint': 'AirPrint', 'network': 'Network',
+    'cups': 'CUPS', 'cpu_temp': 'CPU temp', 'disk': 'Disk', 'uptime': 'Uptime',
+    'online': 'Online', 'offline': 'Offline', 'connected': 'connected',
+    'not_connected': 'Not connected', 'reachable': 'Reachable',
+    'stats': 'Statistics', 'today': 'Today', 'total': 'All time',
+    'since_roll': 'Since roll change', 'last_print': 'Last print',
+    'new_roll': 'New roll', 'connect': 'Connect',
+    'qr_hint': 'Scan QR or type the address in your browser',
+    'raw_cups': 'Raw CUPS status', 'ready': 'Ready',
+    'no_printers': 'No printers found',
+    'cups_restart': 'Restart CUPS?',
+    'cancel_confirm': 'Cancel all jobs?',
+    'roll_confirm': 'New roll — reset counter?',
+  }
+} %}
+{% set _ = t[lang or 'nl'] %}
+
 {% block head %}
 <style>
-.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
-.stat{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);padding:14px 16px}
-.stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px}
-.stat-val{font-size:21px;font-weight:700;line-height:1.1}
-.vy{color:var(--y)}.vg{color:var(--green)}.vr{color:var(--red)}.vo{color:var(--orange)}
-.stat-hint{font-size:11px;color:var(--muted);margin-top:3px}
-.mode-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
-.mode-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px 16px;border-radius:14px;background:var(--s2);border:2px solid var(--b2);text-decoration:none;color:var(--sub);transition:all .2s;text-align:center;position:relative}
-.mode-btn:hover{background:var(--s3);border-color:rgba(255,224,0,.25);color:var(--t)}
-.mode-btn.active{background:var(--yb);border-color:rgba(255,224,0,.5);color:var(--y)}
-.mode-icon{font-size:32px;margin-bottom:10px;opacity:.5;transition:opacity .2s}
-.mode-btn.active .mode-icon{opacity:1}
-.mode-name{font-size:16px;font-weight:700;margin-bottom:4px}
-.mode-desc{font-size:12px;color:var(--muted)}
-.mode-btn.active .mode-desc{color:rgba(255,224,0,.55)}
-.mode-badge{position:absolute;top:10px;right:10px;background:var(--y);color:#0a0a00;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;opacity:0;transition:opacity .2s}
-.mode-btn.active .mode-badge{opacity:1}
-.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.printer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:24px}
+.printer-card{background:var(--s2);border:1px solid var(--b);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.printer-card.state-printing{border-color:rgba(255,224,0,.35);background:rgba(255,224,0,.04)}
+.printer-card.state-error{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.04)}
+.pc-header{display:flex;align-items:center;gap:10px}
+.pc-icon{width:36px;height:36px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.pc-name{font-size:14px;font-weight:700;color:var(--t);line-height:1.2}
+.pc-brand{font-size:11px;color:var(--muted)}
+.pc-state{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-g{background:var(--green)}.dot-r{background:var(--red)}.dot-o{background:var(--orange)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.dot-pulse{animation:pulse 1.8s infinite}
+.pc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.pc-stat{background:var(--s1);border-radius:8px;padding:8px 10px}
+.pc-stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.pc-stat-val{font-size:14px;font-weight:700;color:var(--t)}
+.pc-stat-val.vy{color:var(--y)}
+.pc-modes{display:flex;gap:6px;flex-wrap:wrap}
+.mode-pill{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--b2);color:var(--sub);text-decoration:none;transition:all .15s;cursor:pointer}
+.mode-pill:hover{border-color:rgba(255,224,0,.3);color:var(--y);background:var(--yb)}
+.mode-pill.active{background:var(--yb);border-color:rgba(255,224,0,.5);color:var(--y)}
+.pc-actions{display:flex;gap:6px;flex-wrap:wrap}
+.pc-btn{padding:7px 12px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;transition:opacity .15s;white-space:nowrap}
+.pc-btn:hover{opacity:.82}
+.pc-btn-g{background:var(--green);color:#021a09}
+.pc-btn-r{background:var(--red);color:#fff}
+.pc-btn-y{background:var(--y);color:#0a0a00}
+.pc-btn-ghost{background:transparent;border:1px solid var(--b2);color:var(--sub)}
+.pc-btn-ghost:hover{background:var(--s1);color:var(--t)}
+.marker-bar{height:4px;background:var(--b2);border-radius:2px;margin-top:4px;overflow:hidden}
+.marker-fill{height:100%;border-radius:2px;background:var(--green);transition:width .5s}
+
 .sys-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
 .sys-card{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);padding:13px 15px;display:flex;align-items:center;gap:12px}
 .sys-icon{font-size:20px;flex-shrink:0;width:28px;text-align:center}
@@ -26,30 +85,22 @@
 .sys-name{font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
 .sys-val{font-size:13px;font-weight:600;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sys-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.dot-g{background:var(--green)}.dot-r{background:var(--red)}.dot-o{background:var(--orange)}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.dot-pulse{animation:pulse 2s infinite}
 .mini-bar{height:3px;background:var(--b2);border-radius:2px;margin-top:5px;overflow:hidden}
 .mini-fill{height:100%;border-radius:2px;transition:width .5s}
 .fg{background:var(--green)}.fo{background:var(--orange)}.fr{background:var(--red)}
+
 .counters{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
 .counter{background:var(--s2);border:1px solid var(--b);border-radius:var(--r);padding:14px 16px;text-align:center}
 .counter-num{font-size:26px;font-weight:700;color:var(--y)}
 .counter-label{font-size:11px;color:var(--muted);margin-top:4px}
-.queue-empty{color:var(--muted);font-size:13px;padding:6px 0}
-.job-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b);font-size:13px}
-.job-row:last-child{border-bottom:none}
-.job-num{font-family:monospace;font-size:11px;color:var(--muted);width:32px;flex-shrink:0}
-.job-name{flex:1;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.job-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0;animation:pulse 1.8s infinite}
 .qr-wrap{display:flex;align-items:center;gap:20px}
-.qr-img{background:white;border-radius:8px;padding:8px;flex-shrink:0;width:96px;height:96px}
+.qr-img{background:white;border-radius:8px;padding:8px;flex-shrink:0}
 .qr-img img{width:80px;height:80px;display:block}
-.qr-ip{font-size:20px;font-weight:700;color:var(--t);font-family:monospace}
+.qr-ip{font-size:18px;font-weight:700;color:var(--t);font-family:monospace}
 .qr-hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
 @media(max-width:640px){
-  .stats4,.sys-grid,.counters{grid-template-columns:1fr 1fr}
-  .actions{grid-template-columns:1fr 1fr}
+  .sys-grid,.counters{grid-template-columns:1fr 1fr}
+  .printer-grid{grid-template-columns:1fr}
 }
 </style>
 {% endblock %}
@@ -59,138 +110,183 @@
 
   <div id="banners"></div>
 
-  <div class="section-title">Printer</div>
-  <div class="stats4">
-    <div class="stat"><div class="stat-label">Status</div><div class="stat-val" id="stat-state">—</div></div>
-    <div class="stat"><div class="stat-label">Media</div><div class="stat-val" style="font-size:14px" id="stat-media">—</div></div>
-    <div class="stat"><div class="stat-label">Resterend</div><div class="stat-val vy" id="stat-remaining">—</div><div class="stat-hint">prints in rol</div></div>
-    <div class="stat"><div class="stat-label">Wachtrij</div><div class="stat-val" id="stat-qcount">0</div><div class="stat-hint">jobs</div></div>
+  <!-- Printer overzicht -->
+  <div class="section-title">{{ _['printer_overview'] }}</div>
+  <div class="printer-grid" id="printer-grid">
+    <div style="color:var(--muted);font-size:13px;padding:20px">Laden...</div>
   </div>
 
-  <div class="section-title">Print mode</div>
-  <div class="mode-wrap">
-    <a class="mode-btn" href="/mode/4x6" id="mode-4x6">
-      <span class="mode-badge">Actief</span>
-      <div class="mode-icon">🖼</div>
-      <div class="mode-name">4×6 / 10×15</div>
-      <div class="mode-desc">Hele foto · geen snijlijn</div>
-    </a>
-    <a class="mode-btn" href="/mode/2x6" id="mode-2x6">
-      <span class="mode-badge">Actief</span>
-      <div class="mode-icon">✂️</div>
-      <div class="mode-name">2×6 strip ×2</div>
-      <div class="mode-desc">Twee strips · met snijlijn</div>
-    </a>
-  </div>
-
-  <div class="section-title">Acties</div>
-  <div class="actions">
-    <a class="btn by" href="/test-print">🖨 Test print</a>
-    <a class="btn bg" href="/resume">▶ Resume</a>
-    <a class="btn bo" href="/restart-cups" onclick="return confirm('CUPS herstarten?')">🔄 CUPS</a>
-    <a class="btn br" href="/cancel" onclick="return confirm('Alle jobs annuleren?')">🗑 Wis queue</a>
-  </div>
-
-  <div class="section-title">Systeem</div>
+  <!-- Systeem -->
+  <div class="section-title">{{ _['system'] }}</div>
   <div class="sys-grid">
     <div class="sys-card">
       <div class="sys-icon">📡</div>
-      <div class="sys-info"><div class="sys-name">AirPrint</div><div class="sys-val" id="sys-airprint">—</div></div>
+      <div class="sys-info"><div class="sys-name">{{ _['airprint'] }}</div><div class="sys-val" id="sys-airprint">—</div></div>
       <div class="sys-dot dot-pulse" id="dot-airprint"></div>
     </div>
     <div class="sys-card">
       <div class="sys-icon">🔌</div>
-      <div class="sys-info"><div class="sys-name">Netwerk</div><div class="sys-val" id="sys-network">—</div></div>
+      <div class="sys-info"><div class="sys-name">{{ _['network'] }}</div><div class="sys-val" id="sys-network">—</div></div>
       <div class="sys-dot dot-pulse" id="dot-network"></div>
     </div>
     <div class="sys-card">
       <div class="sys-icon">🖨</div>
-      <div class="sys-info"><div class="sys-name">CUPS</div><div class="sys-val" id="sys-cups">—</div></div>
+      <div class="sys-info"><div class="sys-name">{{ _['cups'] }}</div><div class="sys-val" id="sys-cups">—</div></div>
       <div class="sys-dot dot-pulse" id="dot-cups"></div>
     </div>
     <div class="sys-card">
       <div class="sys-icon">🌡</div>
-      <div class="sys-info"><div class="sys-name">CPU temp</div><div class="sys-val" id="sys-temp">—</div></div>
+      <div class="sys-info"><div class="sys-name">{{ _['cpu_temp'] }}</div><div class="sys-val" id="sys-temp">—</div></div>
       <div class="sys-dot" id="dot-temp"></div>
     </div>
     <div class="sys-card">
       <div class="sys-icon">💾</div>
-      <div class="sys-info"><div class="sys-name">Schijf</div><div class="sys-val" id="sys-disk">—</div><div class="mini-bar"><div class="mini-fill fg" id="bar-disk" style="width:0%"></div></div></div>
+      <div class="sys-info"><div class="sys-name">{{ _['disk'] }}</div><div class="sys-val" id="sys-disk">—</div><div class="mini-bar"><div class="mini-fill fg" id="bar-disk" style="width:0%"></div></div></div>
     </div>
     <div class="sys-card">
       <div class="sys-icon">⏱</div>
-      <div class="sys-info"><div class="sys-name">Uptime</div><div class="sys-val" id="sys-uptime">—</div></div>
+      <div class="sys-info"><div class="sys-name">{{ _['uptime'] }}</div><div class="sys-val" id="sys-uptime">—</div></div>
     </div>
   </div>
 
-  <div class="section-title">Statistieken</div>
+  <!-- Statistieken -->
+  <div class="section-title">{{ _['stats'] }}</div>
   <div class="counters">
-    <div class="counter"><div class="counter-num" id="cnt-today">—</div><div class="counter-label">Vandaag</div></div>
-    <div class="counter"><div class="counter-num" id="cnt-total">—</div><div class="counter-label">Totaal ooit</div></div>
-    <div class="counter"><div class="counter-num" id="cnt-rol">—</div><div class="counter-label">Sinds rol wissel</div></div>
-    <div class="counter"><div class="counter-num" style="font-size:14px;padding-top:6px" id="cnt-last">—</div><div class="counter-label">Laatste print</div></div>
+    <div class="counter"><div class="counter-num" id="cnt-today">—</div><div class="counter-label">{{ _['today'] }}</div></div>
+    <div class="counter"><div class="counter-num" id="cnt-total">—</div><div class="counter-label">{{ _['total'] }}</div></div>
+    <div class="counter"><div class="counter-num" id="cnt-rol">—</div><div class="counter-label">{{ _['since_roll'] }}</div></div>
+    <div class="counter"><div class="counter-num" style="font-size:14px;padding-top:6px" id="cnt-last">—</div><div class="counter-label">{{ _['last_print'] }}</div></div>
   </div>
-  <div style="margin-bottom:20px">
-    <a class="btn bgh" href="/reset-rol" onclick="return confirm('Nieuwe rol geplaatst — teller resetten?')">🔄 Nieuwe rol geplaatst</a>
-  </div>
-
-  <div class="card" style="margin-bottom:16px">
-    <div class="section-title">Wachtrij</div>
-    <div id="queue-list"><div class="queue-empty">Laden...</div></div>
+  <div style="margin-bottom:20px;display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn bgh" href="/reset-rol" onclick="return confirm('{{ _['roll_confirm'] }}')">🔄 {{ _['new_roll'] }}</a>
+    <a class="btn bo" href="/restart-cups" onclick="return confirm('{{ _['cups_restart'] }}')">🔄 CUPS</a>
+    <a class="btn br" href="/cancel" onclick="return confirm('{{ _['cancel_confirm'] }}')">🗑 {{ _['clear_queue'] }}</a>
   </div>
 
+  <!-- Verbinden -->
   <div class="card" style="margin-bottom:16px">
-    <div class="section-title">Verbinden via netwerk</div>
+    <div class="section-title">{{ _['connect'] }}</div>
     <div class="qr-wrap">
-      <div class="qr-img"><img src="/api/qr.png" alt="QR code"></div>
+      <div class="qr-img"><img src="/api/qr.png" alt="QR"></div>
       <div>
         <div class="qr-ip" id="qr-ip">—</div>
-        <div class="qr-hint">Scan de QR code of typ het adres in je browser om het dashboard te openen op je telefoon of tablet</div>
+        <div class="qr-hint">{{ _['qr_hint'] }}</div>
       </div>
     </div>
   </div>
-
-  <details style="background:var(--s2);border:1px solid var(--b);border-radius:var(--r);overflow:hidden">
-    <summary style="padding:12px 16px;font-size:12px;color:var(--muted);cursor:pointer">Ruwe CUPS status</summary>
-    <pre id="raw-status" style="padding:0 16px 14px;font-size:11px;color:var(--muted);font-family:monospace;white-space:pre-wrap;word-break:break-all">—</pre>
-  </details>
 
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function setDot(id, ok){
+const T = {
+  online: "{{ _['online'] }}", offline: "{{ _['offline'] }}",
+  connected: "{{ _['connected'] }}", not_connected: "{{ _['not_connected'] }}",
+  reachable: "{{ _['reachable'] }}", ready: "{{ _['ready'] }}",
+  resume: "{{ _['resume'] }}", test: "{{ _['test_print'] }}",
+  manage: "{{ _['manage'] }}", clear: "{{ _['clear_queue'] }}",
+  no_printers: "{{ _['no_printers'] }}",
+  cancel_confirm: "{{ _['cancel_confirm'] }}",
+};
+
+const BRAND_ICONS = {citizen:'🖨',dnp:'🖨',mitsubishi:'🖨',default:'🖨'};
+const STATE_COLORS = {Ready:'dot-g',Printing:'dot-o dot-pulse',Error:'dot-r','Paused/Error':'dot-r'};
+
+function stateColor(s){
+  if(!s) return 'dot-g';
+  if(s==='Printing') return 'dot-o dot-pulse';
+  if(s==='Paused/Error'||s==='Unknown') return 'dot-r';
+  return 'dot-g';
+}
+function stateLabel(s){
+  if(s==='Printing') return `⚡ Printing`;
+  if(s==='Paused/Error') return `✕ Fout`;
+  if(s==='Unknown') return `? Onbekend`;
+  return `● ${T.ready}`;
+}
+function stateCardClass(s){
+  if(s==='Printing') return 'state-printing';
+  if(s==='Paused/Error') return 'state-error';
+  return '';
+}
+
+function renderPrinters(printers){
+  const grid = document.getElementById('printer-grid');
+  if(!printers||!printers.length){
+    grid.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:20px">${T.no_printers}</div>`;
+    return;
+  }
+
+  // banners
+  let banners = '';
+  printers.forEach(p=>{
+    if(p.friendly_error) banners+=`<div class="banner banner-red">⚠️ ${p.printer}: ${p.friendly_error}</div>`;
+    else if(p.low_paper)  banners+=`<div class="banner banner-orange">⚠️ ${p.printer}: nog ${p.remaining} prints resterend</div>`;
+  });
+  document.getElementById('banners').innerHTML = banners;
+
+  grid.innerHTML = printers.map(p => {
+    const modes = p.modes||{};
+    const modePills = Object.entries(modes).map(([key, m])=>
+      `<a class="mode-pill ${p.current_mode===key?'active':''}" href="/mode/${p.printer}/${key}">${m.label}</a>`
+    ).join('');
+
+    const markerBar = p.marker_level!=null
+      ? `<div class="marker-bar"><div class="marker-fill" style="width:${p.marker_level}%"></div></div>`
+      : '';
+
+    return `
+    <div class="printer-card ${stateCardClass(p.state)}">
+      <div class="pc-header">
+        <div class="pc-icon">🖨</div>
+        <div>
+          <div class="pc-name">${p.printer}</div>
+          <div class="pc-brand">${p.brand.toUpperCase()}</div>
+        </div>
+        <div class="pc-state">
+          <span class="dot ${stateColor(p.state)}"></span>
+          ${stateLabel(p.state)}
+        </div>
+      </div>
+
+      <div class="pc-stats">
+        <div class="pc-stat">
+          <div class="pc-stat-label">Media</div>
+          <div class="pc-stat-val">${p.media||'—'}</div>
+        </div>
+        <div class="pc-stat">
+          <div class="pc-stat-label">Resterend</div>
+          <div class="pc-stat-val vy">${p.remaining||'—'}</div>
+          ${markerBar}
+        </div>
+        <div class="pc-stat">
+          <div class="pc-stat-label">Queue</div>
+          <div class="pc-stat-val">${p.job_count||0}</div>
+        </div>
+      </div>
+
+      ${modePills ? `<div class="pc-modes">${modePills}</div>` : ''}
+
+      <div class="pc-actions">
+        <a class="pc-btn pc-btn-g" href="/resume/${p.printer}">▶ ${T.resume}</a>
+        <a class="pc-btn pc-btn-y" href="/test-print/${p.printer}">🖨 ${T.test}</a>
+        <a class="pc-btn pc-btn-r" href="/cancel/${p.printer}" onclick="return confirm('${T.cancel_confirm}')">🗑</a>
+        <a class="pc-btn pc-btn-ghost" href="/printer/${p.printer}">${T.manage} →</a>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setDot(id,ok){
   const el=document.getElementById(id);
   if(el) el.className='sys-dot '+(ok?'dot-g':'dot-r');
 }
 
-async function pollPrinter(){
+async function pollStatus(){
   try{
     const d=await fetch('/api/status').then(r=>r.json());
-    const l=(d.state||'').toLowerCase();
-    const sc=l.includes('print')?'vy':l.includes('error')||l.includes('paus')?'vr':'vg';
-    document.getElementById('stat-state').textContent=d.friendly_error||d.state||'—';
-    document.getElementById('stat-state').className='stat-val '+sc;
-    document.getElementById('stat-media').textContent=d.media||'—';
-    document.getElementById('stat-remaining').textContent=d.remaining||'—';
-    document.getElementById('stat-qcount').textContent=d.job_count??0;
-    document.getElementById('raw-status').textContent=d.raw_status||'—';
-    ['4x6','2x6'].forEach(k=>{
-      const el=document.getElementById('mode-'+k);
-      if(el) el.classList.toggle('active',d.current_mode===k);
-    });
-    const bEl=document.getElementById('banners');
-    let banners='';
-    if(d.friendly_error) banners+=`<div class="banner banner-red">⚠️ ${d.friendly_error}</div>`;
-    else if(d.low_paper)  banners+=`<div class="banner banner-orange">⚠️ Bijna op — nog ${d.remaining} prints resterend</div>`;
-    bEl.innerHTML=banners;
-    const ql=document.getElementById('queue-list');
-    if(!d.jobs||!d.jobs.length){
-      ql.innerHTML='<div class="queue-empty">Geen jobs in de wachtrij</div>';
-    } else {
-      ql.innerHTML=d.jobs.map((j,i)=>`<div class="job-row"><span class="job-num">#${i+1}</span><span class="job-name">${j}</span><span class="job-dot"></span></div>`).join('');
-    }
+    renderPrinters(d.all_printers||[d]);
   }catch(e){}
 }
 
@@ -198,16 +294,12 @@ async function pollSystem(){
   try{
     const s=await fetch('/api/system').then(r=>r.json());
     setDot('dot-airprint',s.airprint);
-    document.getElementById('sys-airprint').textContent=s.airprint?'Online':'Offline';
-
+    document.getElementById('sys-airprint').textContent=s.airprint?T.online:T.offline;
     const net=s.network||{};
     setDot('dot-network',net.connected);
-    const netLabel=net.type==='ethernet'?'Ethernet':'WiFi';
-    document.getElementById('sys-network').textContent=net.connected?`${netLabel} verbonden`:'Niet verbonden';
-
+    document.getElementById('sys-network').textContent=net.connected?`${net.type==='ethernet'?'Ethernet':'WiFi'} ${T.connected}`:T.not_connected;
     setDot('dot-cups',s.cups);
-    document.getElementById('sys-cups').textContent=s.cups?'Bereikbaar':'Offline';
-
+    document.getElementById('sys-cups').textContent=s.cups?T.reachable:T.offline;
     const t=s.temp;
     const tEl=document.getElementById('sys-temp');
     const dEl=document.getElementById('dot-temp');
@@ -217,29 +309,25 @@ async function pollSystem(){
       else if(t>=60){tEl.className='sys-val vo';dEl.className='sys-dot dot-o';}
       else{tEl.className='sys-val vg';dEl.className='sys-dot dot-g';}
     }
-
     const dk=s.disk||{};
     document.getElementById('sys-disk').textContent=dk.used&&dk.total?`${dk.used} / ${dk.total}`:'—';
     const db=document.getElementById('bar-disk');
     db.style.width=(dk.pct||0)+'%';
     db.className='mini-fill '+((dk.pct||0)>=90?'fr':(dk.pct||0)>=70?'fo':'fg');
-
     document.getElementById('sys-uptime').textContent=s.uptime||'—';
-
     const p=s.prints||{};
     const r=s.rol||{};
     document.getElementById('cnt-today').textContent=p.today??0;
     document.getElementById('cnt-total').textContent=p.total??0;
     document.getElementById('cnt-rol').textContent=r.since_roll??0;
     document.getElementById('cnt-last').textContent=p.last||'—';
-
     document.getElementById('qr-ip').textContent=`http://${s.ip||'—'}`;
   }catch(e){}
 }
 
-pollPrinter();
+pollStatus();
 pollSystem();
-setInterval(pollPrinter,2000);
+setInterval(pollStatus,2000);
 setInterval(pollSystem,5000);
 </script>
 {% endblock %}
