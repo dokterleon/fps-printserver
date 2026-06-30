@@ -1,5 +1,5 @@
 APP_NAME    = "Flitshokje Print Server"
-VERSION     = "2.1.0"
+VERSION     = "2.2.0"
 PRINTER     = "Flitshokje-CX02"
 LOG_FILE    = "logs/history.json"
 STATS_FILE  = "logs/stats.json"
@@ -37,3 +37,4 @@ CUPS_ERROR_MAP = {
     "disabled":           "Uitgeschakeld — klik Resume",
 }
 GITHUB_TOKEN = "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"
+SECRET_KEY = "c9c011a53bae7c5c4807e4d7b50d27f9712a9083a53fc43c78a660ce5ee04bd0"
