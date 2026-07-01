@@ -1,5 +1,5 @@
 APP_NAME    = "Flitshokje Print Server"
-VERSION     = "2.2.0"
+VERSION     = "2.3.1"
 PRINTER     = "Flitshokje-CX02"
 LOG_FILE    = "logs/history.json"
 STATS_FILE  = "logs/stats.json"
