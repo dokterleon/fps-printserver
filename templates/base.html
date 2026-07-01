@@ -10,7 +10,7 @@
   --bg:#09090c;--s1:#111318;--s2:#181b22;--s3:#1f2330;
   --b:rgba(255,255,255,.07);--b2:rgba(255,255,255,.13);
   --t:#f0f0ee;--muted:#6b7280;--sub:#9ca3af;
-  --y:#FFE000;--yb:rgba(255,224,0,.11);
+  --y:#00AAFF;--yb:rgba(0,170,255,.12);
   --green:#22c55e;--gb:rgba(34,197,94,.13);
   --red:#ef4444;--rb:rgba(239,68,68,.13);
   --orange:#f59e0b;--ob:rgba(245,158,11,.13);
@@ -45,7 +45,7 @@ body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSyste
 .banner-red{background:var(--rb);border:1px solid rgba(239,68,68,.25);color:var(--red)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;transition:opacity .15s,transform .1s;white-space:nowrap;border:none}
 .btn:hover{opacity:.82}.btn:active{transform:scale(.97)}
-.by{background:var(--y);color:#0a0a00}
+.by{background:var(--y);color:#ffffff}
 .bg{background:var(--green);color:#021a09}
 .bo{background:var(--orange);color:#fff}
 .br{background:var(--red);color:#fff}
@@ -64,14 +64,7 @@ body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSyste
 
 <div class="topbar">
   <a class="logo" href="/">
-    <svg width="34" height="34" viewBox="0 0 36 36" fill="none">
-      <rect width="36" height="36" rx="9" fill="#FFE000"/>
-      <path d="M14 7L9 20h7l-2 9 12-14h-7l3-8z" fill="#0a0a00"/>
-    </svg>
-    <div>
-      <div class="logo-name">Flitshokje</div>
-      <div class="logo-ver">Print Server v{{ version }}</div>
-    </div>
+    <img src="/static/fps_logo_top.png" alt="FPS" style="height:54px;width:auto">
   </a>
 
   <nav class="topbar-center">
@@ -118,10 +111,9 @@ async function pollChips(){
     const ac=document.getElementById('chip-airprint');
     ac.className='chip '+(ss.airprint?'cg':'cr');
     ac.textContent=(ss.airprint?'● ':'✕ ')+'AirPrint';
-    // Central — altijd groen als beacon actief is
+    // Central — altijd groen
     const cc=document.getElementById('chip-central');
-    cc.className='chip cg';
-    cc.textContent='● Central';
+    if(cc){ cc.className='chip cg'; cc.textContent='● Central'; }
   }catch(e){
     const c=document.getElementById('chip-state');
     c.className='chip cr';c.textContent='✕ Offline';

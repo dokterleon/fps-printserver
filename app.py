@@ -316,6 +316,73 @@ def api_central_status():
                 return jsonify({"online": True})
             return jsonify({"online": False})
 
+
+# ── wifi beheer ───────────────────────────────────────────────────────────────
+
+@app.route("/api/wifi/status")
+@auth.login_required
+def wifi_status():
+    import subprocess, re
+    out = subprocess.getoutput("iwconfig wlan1 2>/dev/null")
+    connected = "ESSID" in out and "off/any" not in out
+    ssid = ""
+    ip = ""
+    if connected:
+        m = re.search(r'ESSID:"([^"]+)"', out)
+        if m: ssid = m.group(1)
+        ip_out = subprocess.getoutput("ip -4 addr show wlan1 2>/dev/null | grep inet")
+        ip_m = re.search(r'inet ([\d.]+)', ip_out)
+        if ip_m: ip = ip_m.group(1)
+    return jsonify({"connected": connected, "ssid": ssid, "ip": ip})
+
+@app.route("/api/wifi/scan")
+@auth.login_required
+def wifi_scan():
+    import subprocess
+    out = subprocess.getoutput("sudo iwlist wlan1 scan 2>/dev/null | grep ESSID")
+    networks = []
+    for line in out.splitlines():
+        line = line.strip()
+        if 'ESSID:"' in line:
+            ssid = line.split('"')[1]
+            if ssid and ssid not in networks:
+                networks.append(ssid)
+    return jsonify({"networks": networks})
+
+@app.route("/api/wifi/connect", methods=["POST"])
+@auth.login_required
+def wifi_connect():
+    import subprocess
+    d = request.json or {}
+    ssid = d.get("ssid", "")
+    password = d.get("password", "")
+    if not ssid:
+        return jsonify({"success": False, "message": "Geen SSID opgegeven"})
+    config = f'''ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=NL
+
+network={{
+    ssid="{ssid}"
+    psk="{password}"
+    key_mgmt=WPA-PSK
+}}
+'''
+    with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
+        f.write(config)
+    subprocess.getoutput("sudo rm -f /var/run/wpa_supplicant/wlan1")
+    subprocess.getoutput("sudo systemctl restart wpa_supplicant@wlan1")
+    subprocess.getoutput("sudo dhcpcd wlan1")
+    return jsonify({"success": True, "message": f"Verbinden met {ssid}..."})
+
+@app.route("/api/wifi/disconnect", methods=["POST"])
+@auth.login_required
+def wifi_disconnect():
+    import subprocess
+    subprocess.getoutput("sudo ip link set wlan1 down")
+    subprocess.getoutput("sudo ip link set wlan1 up")
+    return jsonify({"success": True, "message": "Verbinding verbroken"})
+
 # ── updates ───────────────────────────────────────────────────────────────────
 
 @app.route("/api/check-update")

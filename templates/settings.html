@@ -8,7 +8,7 @@
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
 .field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .field input,.field select{background:var(--s1);border:1px solid var(--b2);border-radius:8px;padding:9px 12px;color:var(--t);font-size:13px;outline:none;width:100%}
-.field input:focus,.field select:focus{border-color:rgba(255,224,0,.4)}
+.field input:focus,.field select:focus{border-color:rgba(0,170,255,.4)}
 .msg{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;background:var(--gb);color:var(--green);border:1px solid rgba(34,197,94,.2)}
 .msg.err{background:var(--rb);color:var(--red);border-color:rgba(239,68,68,.2)}
 .info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--b);font-size:13px}
@@ -27,11 +27,12 @@
 .toggle input:checked~.toggle-thumb{transform:translateX(18px)}
 .update-status{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;border:1px solid var(--b)}
 .update-checking{background:var(--s1);color:var(--muted)}
-.update-available{background:var(--yb);color:var(--y);border-color:rgba(255,224,0,.2)}
+.update-available{background:var(--yb);color:var(--y);border-color:rgba(0,170,255,.2)}
 .update-current{background:var(--gb);color:var(--green);border-color:rgba(34,197,94,.2)}
 .update-error{background:var(--rb);color:var(--red);border-color:rgba(239,68,68,.2)}
 .notif-configured{background:var(--gb);color:var(--green);border:1px solid rgba(34,197,94,.2);padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:12px}
 .notif-unconfigured{background:var(--ob);color:var(--orange);border:1px solid rgba(245,158,11,.2);padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:12px}
+.wifi-status{padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:12px;border:1px solid var(--b)}
 @media(max-width:640px){.settings-grid{grid-template-columns:1fr}}
 </style>
 {% endblock %}
@@ -49,14 +50,14 @@
     <div class="setting-card">
       <div class="setting-title">{% if lang == 'en' %}System info{% else %}Systeem info{% endif %}</div>
       <div class="setting-desc">{% if lang == 'en' %}Current configuration{% else %}Huidige configuratie{% endif %}</div>
-      <div class="info-row"><span class="info-label">Hostname</span><span class="info-val">{{ sys.hostname }}</span></div>
       <div class="info-row"><span class="info-label">IP</span><span class="info-val">{{ sys.ip }}</span></div>
+      <div class="info-row"><span class="info-label">Hostname</span><span class="info-val">{{ sys.hostname }}</span></div>
       <div class="info-row"><span class="info-label">{% if lang == 'en' %}Version{% else %}Versie{% endif %}</span><span class="info-val">v{{ version }}</span></div>
       <div class="info-row"><span class="info-label">Uptime</span><span class="info-val">{{ sys.uptime }}</span></div>
       <div class="info-row"><span class="info-label">CPU</span><span class="info-val">{{ sys.temp }}°C</span></div>
       <div class="info-row"><span class="info-label">Client ID</span><span class="info-val" style="font-family:monospace">{{ beacon.client_id or '—' }}</span></div>
       <div style="margin-top:12px">
-        <a class="btn by" href="/print-config" onclick="return confirm('Configuratiebon printen?')">🖨 {% if lang == "en" %}Print config page{% else %}Print configuratiebon{% endif %}</a>
+        <a class="btn by" href="/print-config" onclick="return confirm('Weet je het zeker?')">🖨 {% if lang == 'en' %}Print config card{% else %}Print configuratiebon{% endif %}</a>
       </div>
     </div>
 
@@ -85,57 +86,57 @@
       </form>
     </div>
 
-    <!-- Notificaties -->
+    <!-- WiFi internet -->
+    <div class="setting-card">
+      <div class="setting-title">{% if lang == 'en' %}Internet WiFi{% else %}Internet WiFi{% endif %}</div>
+      <div class="setting-desc">{% if lang == 'en' %}Connect to venue WiFi for updates and remote monitoring{% else %}Verbind met de WiFi van de locatie voor updates en remote monitoring{% endif %}</div>
+      <div class="wifi-status notif-unconfigured" id="wifi-chip">⏳ {% if lang == 'en' %}Loading...{% else %}Laden...{% endif %}</div>
+      <div class="field">
+        <label>{% if lang == 'en' %}WiFi network{% else %}WiFi netwerk{% endif %}</label>
+        <input type="text" id="wifi-ssid" placeholder="{% if lang == 'en' %}Network name{% else %}Naam van het netwerk{% endif %}" autocorrect="off" autocapitalize="off">
+      </div>
+      <div class="field">
+        <label>{% if lang == 'en' %}Password{% else %}Wachtwoord{% endif %}</label>
+        <input type="password" id="wifi-pass" placeholder="WiFi wachtwoord">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn by" onclick="connectWifi()">{% if lang == 'en' %}Connect{% else %}Verbinden{% endif %}</button>
+        <button class="btn br" onclick="disconnectWifi()">{% if lang == 'en' %}Disconnect{% else %}Verbreken{% endif %}</button>
+        <button class="btn bgh" onclick="scanWifi()">🔍 Scan</button>
+      </div>
+      <div id="wifi-networks" style="margin-top:10px;display:none">
+        <div class="section-title" style="margin-bottom:6px">{% if lang == 'en' %}Available networks{% else %}Beschikbare netwerken{% endif %}</div>
+        <div id="wifi-list"></div>
+      </div>
+      <div id="wifi-output" style="margin-top:8px;font-size:12px;color:var(--muted)"></div>
+    </div>
+
+    <!-- E-mail notificaties -->
     <div class="setting-card">
       <div class="setting-title">{% if lang == 'en' %}Email notifications{% else %}E-mail notificaties{% endif %}</div>
-      <div class="setting-desc">{% if lang == 'en' %}Get notified when the roll is almost empty or a printer has an error{% else %}Ontvang een mail als de rol bijna op is of een printer een fout heeft{% endif %}</div>
+      <div class="setting-desc">{% if lang == 'en' %}Get notified when roll is empty or printer has an error{% else %}Ontvang een mail als de rol bijna op is of een printer een fout heeft{% endif %}</div>
       {% if notif.configured %}
-      <div class="notif-configured">✓ {% if lang == 'en' %}Notifications configured{% else %}Notificaties geconfigureerd{% endif %} → {{ notif.to_email }}</div>
+      <div class="notif-configured">✓ {% if lang == 'en' %}Configured{% else %}Geconfigureerd{% endif %} → {{ notif.to_email }}</div>
       {% else %}
-      <div class="notif-unconfigured">⚠ {% if lang == 'en' %}Not configured yet{% else %}Nog niet geconfigureerd{% endif %}</div>
+      <div class="notif-unconfigured">⚠ {% if lang == 'en' %}Not configured{% else %}Nog niet geconfigureerd{% endif %}</div>
       {% endif %}
       <form method="POST">
         <input type="hidden" name="action" value="notifications">
-        <div class="field">
-          <label>Gmail adres</label>
-          <input type="email" name="gmail_user" value="{{ notif.gmail_user }}" placeholder="jouw@gmail.com">
-        </div>
-        <div class="field">
-          <label>{% if lang == 'en' %}Gmail app password{% else %}Gmail app-wachtwoord{% endif %}</label>
-          <input type="password" name="gmail_pass" placeholder="xxxx xxxx xxxx xxxx">
-        </div>
-        <div class="field">
-          <label>{% if lang == 'en' %}Send notifications to{% else %}Notificaties sturen naar{% endif %}</label>
-          <input type="email" name="to_email" value="{{ notif.to_email }}" placeholder="monteur@bedrijf.nl">
-        </div>
+        <div class="field"><label>Gmail</label><input type="email" name="gmail_user" value="{{ notif.gmail_user }}" placeholder="jouw@gmail.com"></div>
+        <div class="field"><label>{% if lang == 'en' %}App password{% else %}App-wachtwoord{% endif %}</label><input type="password" name="gmail_pass" placeholder="xxxx xxxx xxxx xxxx"></div>
+        <div class="field"><label>{% if lang == 'en' %}Send to{% else %}Sturen naar{% endif %}</label><input type="email" name="to_email" value="{{ notif.to_email }}" placeholder="monteur@bedrijf.nl"></div>
         <div class="toggle-row">
           <div><div class="toggle-label">{% if lang == 'en' %}Roll almost empty{% else %}Rol bijna op{% endif %}</div><div class="toggle-sub">&lt; 20 prints</div></div>
           <label class="toggle"><input type="checkbox" name="notify_low_paper" {% if notif.low_paper %}checked{% endif %}><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
         </div>
         <div class="toggle-row" style="margin-bottom:14px">
-          <div><div class="toggle-label">{% if lang == 'en' %}Printer error{% else %}Printer fout{% endif %}</div><div class="toggle-sub">{% if lang == 'en' %}Paused or error state{% else %}Gepauzeerd of fout{% endif %}</div></div>
+          <div><div class="toggle-label">{% if lang == 'en' %}Printer error{% else %}Printer fout{% endif %}</div></div>
           <label class="toggle"><input type="checkbox" name="notify_printer_error" {% if notif.printer_error %}checked{% endif %}><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn by" type="submit">{% if lang == 'en' %}Save{% else %}Opslaan{% endif %}</button>
-          <button class="btn bgh" type="submit" formaction="/settings" onclick="this.form.querySelector('[name=action]').value='test_notification'">📧 {% if lang == 'en' %}Send test{% else %}Stuur test{% endif %}</button>
+          <button class="btn bgh" type="submit" onclick="this.form.querySelector('[name=action]').value='test_notification'">📧 Test</button>
         </div>
-      </form>
-    </div>
-
-    <!-- Updates -->
-    <div class="setting-card">
-      <div class="setting-title">Updates</div>
-      <div class="setting-desc">{% if lang == 'en' %}Check for and install new versions{% else %}Controleer op en installeer nieuwe versies{% endif %}</div>
-      <div class="update-status update-checking" id="update-status">⏳ {% if lang == 'en' %}Checking...{% else %}Controleren...{% endif %}</div>
-      <div style="display:flex;gap:8px">
-        <button class="btn bgh" onclick="checkUpdate()">🔍 {% if lang == 'en' %}Check{% else %}Controleer{% endif %}</button>
-        <button class="btn by" id="btn-install" style="display:none" onclick="doUpdate()">⬇ {% if lang == 'en' %}Install{% else %}Installeer{% endif %}</button>
-      </div>
-      <div id="update-output" style="margin-top:10px;font-size:11px;font-family:monospace;color:var(--muted);white-space:pre-wrap"></div>
-    </div>
-
-        <button class="btn by" type="submit">{% if lang == 'en' %}Save{% else %}Opslaan{% endif %}</button>
       </form>
     </div>
 
@@ -155,18 +156,30 @@
       </form>
     </div>
 
-    <!-- CUPS -->
+    <!-- Updates -->
+    <div class="setting-card">
+      <div class="setting-title">Updates</div>
+      <div class="setting-desc">{% if lang == 'en' %}Check for and install new versions{% else %}Controleer op en installeer nieuwe versies{% endif %}</div>
+      <div class="update-status update-checking" id="update-status">⏳ {% if lang == 'en' %}Checking...{% else %}Controleren...{% endif %}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn bgh" onclick="checkUpdate()">🔍 {% if lang == 'en' %}Check{% else %}Controleer{% endif %}</button>
+        <button class="btn by" id="btn-install" style="display:none" onclick="doUpdate()">⬇ {% if lang == 'en' %}Install{% else %}Installeer{% endif %}</button>
+      </div>
+      <div id="update-output" style="margin-top:10px;font-size:11px;font-family:monospace;color:var(--muted);white-space:pre-wrap"></div>
+    </div>
+
+    <!-- CUPS acties -->
     <div class="setting-card">
       <div class="setting-title">{% if lang == 'en' %}Printer actions{% else %}Printer acties{% endif %}</div>
       <div class="setting-desc">{% if lang == 'en' %}Direct CUPS controls{% else %}Directe CUPS bediening{% endif %}</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <a class="btn bg" href="/resume">▶ Resume {% if lang == 'en' %}all printers{% else %}alle printers{% endif %}</a>
-        <a class="btn bo" href="/restart-cups" onclick="return confirm('CUPS herstarten?')">🔄 Restart CUPS</a>
-        <a class="btn br" href="/cancel" onclick="return confirm('Alle jobs annuleren?')">🗑 {% if lang == 'en' %}Clear all queues{% else %}Wis alle queues{% endif %}</a>
+        <a class="btn bo" href="/restart-cups" onclick="return confirm('Weet je het zeker?')">🔄 Restart CUPS</a>
+        <a class="btn br" href="/cancel" onclick="return confirm('Weet je het zeker?')">🗑 {% if lang == 'en' %}Clear queue{% else %}Wis wachtrij{% endif %}</a>
       </div>
     </div>
 
-    <!-- Centrale server -->
+    <!-- FPS Centrale server -->
     <div class="setting-card">
       <div class="setting-title">FPS Centrale server</div>
       <div class="setting-desc">{% if lang == 'en' %}Remote monitoring status{% else %}Remote monitoring status{% endif %}</div>
@@ -179,10 +192,58 @@
 
 {% block scripts %}
 <script>
+async function loadWifiStatus(){
+  try{
+    const d = await fetch('/api/wifi/status').then(r=>r.json());
+    const chip = document.getElementById('wifi-chip');
+    if(d.connected){
+      chip.className='wifi-status notif-configured';
+      chip.innerHTML=`✓ {% if lang == 'en' %}Connected to{% else %}Verbonden met{% endif %} <strong>${d.ssid}</strong> · ${d.ip}`;
+    } else {
+      chip.className='wifi-status notif-unconfigured';
+      chip.innerHTML='⚠ {% if lang == "en" %}Not connected to internet WiFi{% else %}Niet verbonden met internet WiFi{% endif %}';
+    }
+  }catch(e){}
+}
+
+async function connectWifi(){
+  const ssid = document.getElementById('wifi-ssid').value;
+  const pass = document.getElementById('wifi-pass').value;
+  document.getElementById('wifi-output').textContent = '{% if lang == "en" %}Connecting...{% else %}Verbinden...{% endif %}';
+  const d = await fetch('/api/wifi/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid,password:pass})}).then(r=>r.json());
+  document.getElementById('wifi-output').textContent = d.message;
+  setTimeout(loadWifiStatus, 5000);
+}
+
+async function disconnectWifi(){
+  const d = await fetch('/api/wifi/disconnect',{method:'POST'}).then(r=>r.json());
+  document.getElementById('wifi-output').textContent = d.message;
+  setTimeout(loadWifiStatus, 2000);
+}
+
+async function scanWifi(){
+  document.getElementById('wifi-output').textContent = '{% if lang == "en" %}Scanning...{% else %}Scannen...{% endif %}';
+  const d = await fetch('/api/wifi/scan').then(r=>r.json());
+  const list = document.getElementById('wifi-list');
+  const wrap = document.getElementById('wifi-networks');
+  if(d.networks && d.networks.length){
+    list.innerHTML = d.networks.map(n=>`
+      <div style="padding:8px 10px;background:var(--s1);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:13px"
+           onclick="document.getElementById('wifi-ssid').value='${n}'">
+        📶 ${n}
+      </div>`).join('');
+    wrap.style.display='block';
+  } else {
+    list.innerHTML='<div style="color:var(--muted);font-size:13px">{% if lang == "en" %}No networks found{% else %}Geen netwerken gevonden{% endif %}</div>';
+    wrap.style.display='block';
+  }
+  document.getElementById('wifi-output').textContent = '';
+}
+
 async function checkUpdate(){
   const el=document.getElementById('update-status');
   el.className='update-status update-checking';
-  el.innerHTML='⏳ Controleren...';
+  el.innerHTML='⏳ {% if lang == "en" %}Checking...{% else %}Controleren...{% endif %}';
   document.getElementById('btn-install').style.display='none';
   try{
     const d=await fetch('/api/check-update').then(r=>r.json());
@@ -199,14 +260,14 @@ async function checkUpdate(){
     }
   }catch(e){
     el.className='update-status update-error';
-    el.innerHTML='✕ Controleren mislukt';
+    el.innerHTML='✕ {% if lang == "en" %}Check failed{% else %}Controleren mislukt{% endif %}';
   }
 }
 
 async function doUpdate(){
   const el=document.getElementById('update-status');
   el.className='update-status update-checking';
-  el.innerHTML='⏳ Update installeren...';
+  el.innerHTML='⏳ {% if lang == "en" %}Installing...{% else %}Installeren...{% endif %}';
   document.getElementById('btn-install').style.display='none';
   try{
     const d=await fetch('/api/do-update',{method:'POST'}).then(r=>r.json());
@@ -215,12 +276,12 @@ async function doUpdate(){
     document.getElementById('update-output').textContent=d.output||'';
   }catch(e){
     el.className='update-status update-error';
-    el.innerHTML='✕ Mislukt';
+    el.innerHTML='✕ {% if lang == "en" %}Failed{% else %}Mislukt{% endif %}';
   }
 }
 
 function disablePassword(){
-  if(!confirm('Wachtwoord uitschakelen?')) return;
+  if(!confirm('{% if lang == "en" %}Disable password?{% else %}Wachtwoord uitschakelen?{% endif %}')) return;
   const form=document.createElement('form');
   form.method='POST';
   const inp=document.createElement('input');
@@ -228,6 +289,8 @@ function disablePassword(){
   form.appendChild(inp);document.body.appendChild(form);form.submit();
 }
 
+loadWifiStatus();
 checkUpdate();
+setInterval(loadWifiStatus, 10000);
 </script>
 {% endblock %}
