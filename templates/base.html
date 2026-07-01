@@ -88,6 +88,7 @@ body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSyste
 
   <div class="topbar-right">
     <span class="chip" id="chip-airprint">● AirPrint</span>
+    <span class="chip cg" id="chip-central">● Central</span>
     <span class="chip" id="chip-state">● {% if lang == 'en' %}Loading{% else %}Laden{% endif %}</span>
     {% if lang == 'en' %}
       <a class="lang-btn" href="/lang/nl">🇳🇱</a>
@@ -117,6 +118,10 @@ async function pollChips(){
     const ac=document.getElementById('chip-airprint');
     ac.className='chip '+(ss.airprint?'cg':'cr');
     ac.textContent=(ss.airprint?'● ':'✕ ')+'AirPrint';
+    // Central — altijd groen als beacon actief is
+    const cc=document.getElementById('chip-central');
+    cc.className='chip cg';
+    cc.textContent='● Central';
   }catch(e){
     const c=document.getElementById('chip-state');
     c.className='chip cr';c.textContent='✕ Offline';

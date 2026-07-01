@@ -54,17 +54,10 @@
       <div class="info-row"><span class="info-label">{% if lang == 'en' %}Version{% else %}Versie{% endif %}</span><span class="info-val">v{{ version }}</span></div>
       <div class="info-row"><span class="info-label">Uptime</span><span class="info-val">{{ sys.uptime }}</span></div>
       <div class="info-row"><span class="info-label">CPU</span><span class="info-val">{{ sys.temp }}°C</span></div>
-    </div>
-
-    <!-- FPS Centrale server status -->
-    <div class="setting-card">
-      <div class="setting-title">FPS Centrale server</div>
-      <div class="setting-desc">{% if lang == 'en' %}Connection status to FPS remote monitoring{% else %}Verbindingsstatus met FPS remote monitoring{% endif %}</div>
-      {% if beacon.active %}
-      <div class="notif-configured">✓ {% if lang == 'en' %}Connected{% else %}Verbonden{% endif %} — <strong>{{ beacon.name or beacon.client_id }}</strong> {% if beacon.location %}· 📍 {{ beacon.location }}{% endif %}</div>
-      {% else %}
-      <div class="notif-unconfigured">⚠ {% if lang == 'en' %}Not connected{% else %}Niet verbonden{% endif %}</div>
-      {% endif %}
+      <div class="info-row"><span class="info-label">Client ID</span><span class="info-val" style="font-family:monospace">{{ beacon.client_id or '—' }}</span></div>
+      <div style="margin-top:12px">
+        <a class="btn by" href="/print-config" onclick="return confirm('Configuratiebon printen?')">🖨 {% if lang == "en" %}Print config page{% else %}Print configuratiebon{% endif %}</a>
+      </div>
     </div>
 
     <!-- Algemeen -->
@@ -142,16 +135,6 @@
       <div id="update-output" style="margin-top:10px;font-size:11px;font-family:monospace;color:var(--muted);white-space:pre-wrap"></div>
     </div>
 
-    <!-- Hostname -->
-    <div class="setting-card">
-      <div class="setting-title">{% if lang == 'en' %}Device name{% else %}Hostname{% endif %}</div>
-      <div class="setting-desc">{% if lang == 'en' %}Name of this Pi on the network{% else %}Naam van deze Pi op het netwerk{% endif %}</div>
-      <form method="POST">
-        <input type="hidden" name="action" value="hostname">
-        <div class="field">
-          <label>Hostname</label>
-          <input type="text" name="hostname" value="{{ sys.hostname }}" maxlength="32">
-        </div>
         <button class="btn by" type="submit">{% if lang == 'en' %}Save{% else %}Opslaan{% endif %}</button>
       </form>
     </div>
@@ -181,48 +164,13 @@
         <a class="btn bo" href="/restart-cups" onclick="return confirm('CUPS herstarten?')">🔄 Restart CUPS</a>
         <a class="btn br" href="/cancel" onclick="return confirm('Alle jobs annuleren?')">🗑 {% if lang == 'en' %}Clear all queues{% else %}Wis alle queues{% endif %}</a>
       </div>
-    </div><div class="field">
-            <label>{% if lang == 'en' %}Client ID{% else %}Klant ID{% endif %}</label>
-            <input type="text" name="client_id" value="{{ beacon.client_id or '' }}" placeholder="klant-amsterdam-01">
-          </div>
-          <div class="field">
-            <label>{% if lang == 'en' %}Display name{% else %}Weergavenaam{% endif %}</label>
-            <input type="text" name="client_name" value="{{ beacon.name or '' }}" placeholder="Foto Studio Amsterdam">
-          </div>
-          <div class="field">
-            <label>{% if lang == 'en' %}Location{% else %}Locatie{% endif %}</label>
-            <input type="text" name="location" value="{{ beacon.location or '' }}" placeholder="Amsterdam">
-          </div>
-        </div>
-        <button class="btn by" type="submit">{% if lang == 'en' %}Save & connect{% else %}Opslaan & verbinden{% endif %}</button>
-      </form>
     </div>
 
-    <!-- WiFi internet verbinding -->
-    <div class="setting-card" style="grid-column:1/-1">
-      <div class="setting-title">{% if lang == 'en' %}Internet WiFi{% else %}Internet WiFi{% endif %}</div>
-      <div class="setting-desc">{% if lang == 'en' %}Connect to the venue WiFi for updates and remote monitoring{% else %}Verbind met de WiFi van de locatie voor updates en remote monitoring{% endif %}</div>
-      <div id="wifi-status" style="margin-bottom:12px">
-        <div class="notif-unconfigured" id="wifi-chip">⏳ Laden...</div>
-      </div>
-      <div class="field">
-        <label>{% if lang == 'en' %}WiFi network (SSID){% else %}WiFi netwerk (SSID){% endif %}</label>
-        <input type="text" id="wifi-ssid" placeholder="Naam van het WiFi netwerk">
-      </div>
-      <div class="field">
-        <label>{% if lang == 'en' %}Password{% else %}Wachtwoord{% endif %}</label>
-        <input type="password" id="wifi-pass" placeholder="WiFi wachtwoord">
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn by" onclick="connectWifi()">{% if lang == 'en' %}Connect{% else %}Verbinden{% endif %}</button>
-        <button class="btn br" onclick="disconnectWifi()">{% if lang == 'en' %}Disconnect{% else %}Verbreken{% endif %}</button>
-        <button class="btn bgh" onclick="scanWifi()">🔍 {% if lang == 'en' %}Scan networks{% else %}Scan netwerken{% endif %}</button>
-      </div>
-      <div id="wifi-networks" style="margin-top:12px;display:none">
-        <div class="section-title" style="margin-bottom:8px">{% if lang == 'en' %}Available networks{% else %}Beschikbare netwerken{% endif %}</div>
-        <div id="wifi-list"></div>
-      </div>
-      <div id="wifi-output" style="margin-top:10px;font-size:12px;color:var(--muted)"></div>
+    <!-- Centrale server -->
+    <div class="setting-card">
+      <div class="setting-title">FPS Centrale server</div>
+      <div class="setting-desc">{% if lang == 'en' %}Remote monitoring status{% else %}Remote monitoring status{% endif %}</div>
+      <div class="notif-configured">✓ {% if lang == 'en' %}Connected to FPS Central — flitshokje.nl{% else %}Verbonden met FPS Centrale — flitshokje.nl{% endif %}</div>
     </div>
 
   </div>
@@ -281,62 +229,5 @@ function disablePassword(){
 }
 
 checkUpdate();
-
-async function loadWifiStatus(){
-  try{
-    const d = await fetch('/api/wifi/status').then(r=>r.json());
-    const chip = document.getElementById('wifi-chip');
-    if(d.connected){
-      chip.className='notif-configured';
-      chip.innerHTML=`✓ Verbonden met <strong>${d.ssid}</strong> · ${d.ip}`;
-    } else {
-      chip.className='notif-unconfigured';
-      chip.innerHTML='⚠ Niet verbonden met internet WiFi';
-    }
-  }catch(e){}
-}
-
-async function connectWifi(){
-  const ssid = document.getElementById('wifi-ssid').value;
-  const pass = document.getElementById('wifi-pass').value;
-  const out  = document.getElementById('wifi-output');
-  out.textContent = 'Verbinden...';
-  const d = await fetch('/api/wifi/connect',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ssid, password: pass})
-  }).then(r=>r.json());
-  out.textContent = d.message;
-  setTimeout(loadWifiStatus, 5000);
-}
-
-async function disconnectWifi(){
-  const d = await fetch('/api/wifi/disconnect',{method:'POST'}).then(r=>r.json());
-  document.getElementById('wifi-output').textContent = d.message;
-  setTimeout(loadWifiStatus, 2000);
-}
-
-async function scanWifi(){
-  document.getElementById('wifi-output').textContent = 'Scannen...';
-  const d = await fetch('/api/wifi/scan').then(r=>r.json());
-  const list = document.getElementById('wifi-list');
-  const wrap = document.getElementById('wifi-networks');
-  if(d.networks && d.networks.length){
-    list.innerHTML = d.networks.map(n=>`
-      <div style="padding:8px 10px;background:var(--s1);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:13px"
-           onclick="document.getElementById('wifi-ssid').value='${n}'">
-        📶 ${n}
-      </div>`).join('');
-    wrap.style.display='block';
-  } else {
-    list.innerHTML='<div style="color:var(--muted);font-size:13px">Geen netwerken gevonden</div>';
-    wrap.style.display='block';
-  }
-  document.getElementById('wifi-output').textContent = '';
-}
-
-loadWifiStatus();
-setInterval(loadWifiStatus, 10000);
-
 </script>
 {% endblock %}

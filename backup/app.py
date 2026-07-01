@@ -119,6 +119,13 @@ def api_printer(name):
 
 # ── printer acties ────────────────────────────────────────────────────────────
 
+@app.route("/print-config")
+@auth.login_required
+def print_config():
+    import print_config_page
+    ok, msg = print_config_page.print_config_page()
+    return redirect("/settings")
+
 @app.route("/mode/<name>/<mode>")
 @auth.login_required
 def set_mode(name, mode):
@@ -156,6 +163,14 @@ def test_print(name):
 def reset_rol():
     system.reset_rol()
     return redirect("/")
+
+
+@app.route("/print-config")
+@auth.login_required
+def print_config():
+    import print_config_page
+    ok, msg = print_config_page.print_config_page()
+    return redirect("/settings")
 
 # ── instellingen ──────────────────────────────────────────────────────────────
 

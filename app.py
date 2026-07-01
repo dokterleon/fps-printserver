@@ -4,8 +4,7 @@ import printer, system, auth, updater, settings_manager, notifier, beacon
 from config import APP_NAME, VERSION
 
 app = Flask(__name__)
-from config import APP_NAME, VERSION, SECRET_KEY
-app.secret_key = SECRET_KEY
+app.secret_key = "16ed352662fb8656e6755ab6ae6234cd3b3980df3d0fc84a444fd4da7ded82b0"
 
 # ── achtergrond loops ─────────────────────────────────────────────────────────
 
@@ -81,11 +80,61 @@ def set_lang(lang):
 def get_lang():
     return session.get("lang", settings_manager.get("language"))
 
+
+
+# ── captive portal detectie (iOS/Android) ────────────────────────────────────
+
+@app.route("/hotspot-detect.html")
+@app.route("/library/test/success.html")
+@app.route("/generate_204")
+@app.route("/ncsi.txt")
+@app.route("/connecttest.txt")
+def captive_portal():
+    return redirect("/", 302)
+
+# ── setup ─────────────────────────────────────────────────────────────────────
+
+def _setup_done():
+    """Check of de setup al gedaan is."""
+    import os
+    return os.path.exists("/home/flitshokje/flitshokje-printserver/logs/beacon.json")
+
+
+@app.route("/api/setup-password", methods=["POST"])
+def api_setup_password():
+    d  = request.json or {}
+    pw = d.get("password", "")
+    if pw:
+        auth.set_password(pw)
+    return jsonify({"ok": True})
+
+@app.route("/setup")
+def setup():
+    return render_template("setup.html")
+
+@app.route("/api/setup", methods=["POST"])
+def api_setup():
+    import json as _json
+    d = request.json or {}
+    client_id = d.get("client_id", "").strip().replace(" ", "-")
+    name      = d.get("name", "").strip()
+    location  = d.get("location", "").strip()
+    if not client_id or not name:
+        return jsonify({"ok": False, "error": "Vul alle velden in"})
+    beacon.save_settings({
+        "client_id": client_id,
+        "name":      name,
+        "location":  location,
+    })
+    return jsonify({"ok": True})
+
 # ── dashboard ─────────────────────────────────────────────────────────────────
 
 @app.route("/")
 @auth.login_required
 def index():
+    if not _setup_done():
+        return redirect("/setup")
     return render_template("index.html", app_name=APP_NAME, version=VERSION, lang=get_lang())
 
 @app.route("/api/status")
@@ -163,6 +212,14 @@ def reset_rol():
     system.reset_rol()
     return redirect("/")
 
+
+@app.route("/print-config")
+@auth.login_required
+def print_config():
+    import print_config_page
+    print_config_page.print_config_page()
+    return redirect("/settings")
+
 # ── instellingen ──────────────────────────────────────────────────────────────
 
 @app.route("/settings", methods=["GET", "POST"])
@@ -229,72 +286,28 @@ def settings():
         beacon=beacon_cfg)
 
 
-# ── wifi beheer ───────────────────────────────────────────────────────────────
-
-@app.route("/api/wifi/status")
+@app.route("/api/central-status")
 @auth.login_required
-def wifi_status():
-    import subprocess
-    out = subprocess.getoutput("iwconfig wlan1 2>/dev/null")
-    connected = "ESSID" in out and 'off/any' not in out
-    ssid = ""
-    ip = ""
-    if connected:
-        import re
-        m = re.search(r'ESSID:"([^"]+)"', out)
-        if m: ssid = m.group(1)
-        ip_out = subprocess.getoutput("ip -4 addr show wlan1 2>/dev/null | grep inet")
-        ip_m = re.search(r'inet ([\d.]+)', ip_out)
-        if ip_m: ip = ip_m.group(1)
-    return jsonify({"connected": connected, "ssid": ssid, "ip": ip})
-
-@app.route("/api/wifi/scan")
-@auth.login_required
-def wifi_scan():
-    import subprocess
-    out = subprocess.getoutput("sudo iwlist wlan1 scan 2>/dev/null | grep ESSID")
-    networks = []
-    for line in out.splitlines():
-        line = line.strip()
-        if 'ESSID:"' in line:
-            ssid = line.split('"')[1]
-            if ssid and ssid not in networks:
-                networks.append(ssid)
-    return jsonify({"networks": networks})
-
-@app.route("/api/wifi/connect", methods=["POST"])
-@auth.login_required
-def wifi_connect():
-    import subprocess, os
-    d = request.json or {}
-    ssid = d.get("ssid", "")
-    password = d.get("password", "")
-    if not ssid:
-        return jsonify({"success": False, "message": "Geen SSID opgegeven"})
-    # wpa_supplicant config schrijven
-    config = f'''ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=NL
-
-network={{
-    ssid="{ssid}"
-    psk="{password}"
-    key_mgmt=WPA-PSK
-}}
-'''
-    with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
-        f.write(config)
-    subprocess.getoutput("sudo systemctl restart wpa_supplicant@wlan1")
-    subprocess.getoutput("sudo dhcpcd wlan1")
-    return jsonify({"success": True, "message": f"Verbinden met {ssid}..."})
-
-@app.route("/api/wifi/disconnect", methods=["POST"])
-@auth.login_required
-def wifi_disconnect():
-    import subprocess
-    subprocess.getoutput("sudo ip link set wlan1 down")
-    subprocess.getoutput("sudo ip link set wlan1 up")
-    return jsonify({"success": True, "message": "Verbinding verbroken"})
+def api_central_status():
+    import urllib.request
+    try:
+        req = urllib.request.Request(
+            "https://central.flitshokje.nl/api/ping",
+            data=b'{}',
+            headers={"Content-Type": "application/json", "X-API-Key": ""},
+            method="POST"
+        )
+        urllib.request.urlopen(req, timeout=3)
+        return jsonify({"online": True})
+    except Exception:
+        # ping endpoint bestaat maar geeft 401 = centrale is online
+        try:
+            urllib.request.urlopen("https://central.flitshokje.nl", timeout=3)
+            return jsonify({"online": True})
+        except Exception as e:
+            if "401" in str(e) or "403" in str(e):
+                return jsonify({"online": True})
+            return jsonify({"online": False})
 
 # ── updates ───────────────────────────────────────────────────────────────────
 
@@ -333,3 +346,4 @@ if __name__ == "__main__":
     threading.Thread(target=auto_update_loop, daemon=True).start()
     threading.Thread(target=beacon_loop,      daemon=True).start()
     app.run(host="0.0.0.0", port=80)
+# Bovenstaande wordt toegevoegd aan de bestaande routes sectie
