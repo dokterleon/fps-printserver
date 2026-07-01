@@ -10,158 +10,171 @@
   --bg:#09090c;--s1:#111318;--s2:#181b22;
   --b:rgba(255,255,255,.07);--b2:rgba(255,255,255,.13);
   --t:#f0f0ee;--muted:#6b7280;
-  --y:#00AAFF;--yb:rgba(0,170,255,.12);
-  --green:#22c55e;--gb:rgba(34,197,94,.13);
-  --r:12px;
+  --y:#00AAFF;--r:12px;
 }
-body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-
-.box{background:var(--s1);border:1px solid var(--b2);border-radius:18px;padding:36px 32px;width:100%;max-width:420px}
-
-.logo{display:flex;align-items:center;gap:12px;margin-bottom:28px}
-.logo-bolt{width:38px;height:38px;border-radius:10px;background:var(--y);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.logo-name{font-size:17px;font-weight:700}
-.logo-sub{font-size:11px;color:var(--muted)}
-
-.step-title{font-size:20px;font-weight:700;margin-bottom:6px}
-.step-desc{font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6}
-
-.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+body{
+  background:var(--bg);
+  color:var(--t);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.logo-wrap{
+  margin-bottom:24px;
+  text-align:center;
+}
+.logo-wrap img{
+  height:200px;
+  width:auto;
+}
+.box{
+  background:var(--s1);
+  border:1px solid var(--b2);
+  border-radius:18px;
+  padding:32px 28px;
+  width:100%;
+  max-width:400px;
+}
+.progress{display:flex;gap:6px;margin-bottom:22px}
+.bar{flex:1;height:3px;border-radius:2px;background:var(--b2)}
+.bar.done{background:var(--y)}
+.bar.active{background:#22c55e}
+.title{font-size:19px;font-weight:700;margin-bottom:6px}
+.desc{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
 .field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .field input{background:var(--s2);border:1px solid var(--b2);border-radius:9px;padding:11px 14px;color:var(--t);font-size:15px;outline:none;width:100%}
 .field input:focus{border-color:rgba(0,170,255,.5)}
 .field .hint{font-size:11px;color:var(--muted)}
-
-.btn{width:100%;padding:14px;border-radius:10px;font-size:15px;font-weight:700;background:var(--y);color:#ffffff;border:none;cursor:pointer;margin-top:8px;transition:opacity .15s}
+.btn{width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:700;background:var(--y);color:#fff;border:none;cursor:pointer;margin-top:6px}
 .btn:hover{opacity:.88}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-
-.progress{display:flex;gap:6px;margin-bottom:28px}
-.step{flex:1;height:3px;border-radius:2px;background:var(--b2)}
-.step.done{background:var(--y)}
-.step.active{background:var(--green)}
-
-.success{text-align:center;padding:20px 0}
-.success-icon{font-size:56px;margin-bottom:16px}
-.success-title{font-size:22px;font-weight:700;color:var(--green);margin-bottom:8px}
-.success-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+.skip{display:block;text-align:center;margin-top:12px;font-size:13px;color:var(--muted);cursor:pointer;text-decoration:none}
+.err{background:rgba(239,68,68,.13);border:1px solid rgba(239,68,68,.2);color:#ef4444;border-radius:8px;padding:10px 13px;font-size:13px;margin-bottom:13px;display:none}
+.success{text-align:center;padding:16px 0}
+.success-icon{font-size:52px;margin-bottom:14px}
+.success-title{font-size:21px;font-weight:700;color:#22c55e;margin-bottom:8px}
+.success-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
 </style>
 </head>
 <body>
+
+<div class="logo-wrap">
+  <img src="/static/fps_logo.png" alt="FPS Flitshokje Print Server">
+</div>
+
 <div class="box">
-  <div class="logo">
-    <div class="logo-bolt">⚡</div>
-    <div>
-      <div class="logo-name">Flitshokje Print Server</div>
-      <div class="logo-sub">Eerste installatie</div>
-    </div>
-  </div>
-
   <div class="progress">
-    <div class="step active" id="s1"></div>
-    <div class="step" id="s2"></div>
-    <div class="step" id="s3"></div>
+    <div class="bar active" id="b1"></div>
+    <div class="bar" id="b2"></div>
+    <div class="bar" id="b3"></div>
   </div>
 
-  <!-- Stap 1: Apparaat info -->
-  <div id="step1">
-    <div class="step-title">Apparaat instellen</div>
-    <div class="step-desc">Vul de gegevens in voor dit apparaat. Deze worden gebruikt voor remote monitoring via het FPS centrale dashboard.</div>
-
+  <!-- Stap 1: Apparaat -->
+  <div id="s1">
+    <div class="title">Apparaat instellen</div>
+    <div class="desc">Vul de gegevens in voor dit apparaat.</div>
+    <div class="err" id="err1">Vul het Apparaat ID en naam in.</div>
     <div class="field">
       <label>Apparaat ID</label>
-      <input type="text" id="client_id" placeholder="bijv. jansen-amsterdam-01" autocomplete="off" autocorrect="off" autocapitalize="off">
-      <span class="hint">Uniek ID per apparaat — geen spaties, gebruik koppeltekens</span>
+      <input type="text" id="client_id" placeholder="bijv. jansen-amsterdam-01" autocorrect="off" autocapitalize="off">
+      <span class="hint">Uniek per apparaat, geen spaties</span>
     </div>
     <div class="field">
-      <label>Naam klant / locatie</label>
+      <label>Naam</label>
       <input type="text" id="client_name" placeholder="bijv. Fotostudio Jansen">
     </div>
     <div class="field">
-      <label>Stad / locatie</label>
+      <label>Locatie</label>
       <input type="text" id="location" placeholder="bijv. Amsterdam">
     </div>
-
-    <button class="btn" onclick="goStep2()">Volgende →</button>
+    <button class="btn" onclick="step1()">Volgende →</button>
   </div>
 
-  <!-- Stap 2: WiFi -->
-  <div id="step2" style="display:none">
-    <div class="step-title">Internet WiFi (optioneel)</div>
-    <div class="step-desc">Vul het WiFi netwerk van de locatie in voor updates en remote monitoring. Je kunt dit ook later instellen via de instellingen.</div>
-
+  <!-- Stap 2: Wachtwoord -->
+  <div id="s2" style="display:none">
+    <div class="title">Wachtwoord instellen</div>
+    <div class="desc">Stel een wachtwoord in voor het dashboard op http://10.0.0.1</div>
+    <div class="err" id="err2">Wachtwoorden komen niet overeen.</div>
     <div class="field">
-      <label>WiFi netwerk (SSID)</label>
-      <input type="text" id="wifi_ssid" placeholder="Naam van het WiFi netwerk" autocorrect="off" autocapitalize="off">
+      <label>Wachtwoord</label>
+      <input type="password" id="pw1" placeholder="Kies een wachtwoord">
+    </div>
+    <div class="field">
+      <label>Herhaal wachtwoord</label>
+      <input type="password" id="pw2" placeholder="Herhaal wachtwoord">
+    </div>
+    <button class="btn" onclick="step2()">Volgende →</button>
+    <a class="skip" onclick="step2(true)">Overslaan — later instellen</a>
+  </div>
+
+  <!-- Stap 3: WiFi -->
+  <div id="s3" style="display:none">
+    <div class="title">Internet WiFi (optioneel)</div>
+    <div class="desc">Verbind met het WiFi netwerk van de locatie voor updates en remote monitoring.</div>
+    <div class="field">
+      <label>WiFi netwerk</label>
+      <input type="text" id="wifi_ssid" placeholder="Naam van het netwerk" autocorrect="off" autocapitalize="off">
     </div>
     <div class="field">
       <label>Wachtwoord</label>
       <input type="password" id="wifi_pass" placeholder="WiFi wachtwoord">
     </div>
-
-    <button class="btn" onclick="goStep3()">Opslaan & afronden →</button>
-    <div style="text-align:center;margin-top:12px">
-      <a href="#" onclick="goStep3(true)" style="font-size:13px;color:var(--muted)">Overslaan, later instellen</a>
-    </div>
+    <button class="btn" onclick="step3()">Afronden →</button>
+    <a class="skip" onclick="step3(true)">Overslaan</a>
   </div>
 
-  <!-- Stap 3: Klaar -->
-  <div id="step3" style="display:none">
+  <!-- Klaar -->
+  <div id="s4" style="display:none">
     <div class="success">
       <div class="success-icon">✅</div>
       <div class="success-title">Installatie voltooid!</div>
-      <div class="success-sub" id="success-msg">Het apparaat is geconfigureerd en verbonden met FPS centrale.</div>
-      <button class="btn" onclick="window.location='/'">Naar dashboard →</button>
+      <div class="success-sub">Het apparaat is geconfigureerd. Klik hieronder om in te loggen.</div>
+      <button class="btn" onclick="window.location='/login'">Inloggen →</button>
     </div>
   </div>
-
 </div>
 
 <script>
-function goStep2(){
+function show(id){ ['s1','s2','s3','s4'].forEach(s=>document.getElementById(s).style.display=s===id?'block':'none'); }
+function setBar(n){ ['b1','b2','b3'].forEach((b,i)=>{ const el=document.getElementById(b); el.className='bar '+(i<n-1?'done':i===n-1?'active':''); }); }
+
+async function step1(){
   const id   = document.getElementById('client_id').value.trim();
   const name = document.getElementById('client_name').value.trim();
   const loc  = document.getElementById('location').value.trim();
-
-  if(!id || !name){
-    alert('Vul minimaal het Apparaat ID en naam in.');
-    return;
-  }
-
-  // Sla op via API
-  fetch('/api/setup', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({client_id: id, name, location: loc})
-  }).then(r => r.json()).then(d => {
-    if(d.ok){
-      document.getElementById('step1').style.display = 'none';
-      document.getElementById('step2').style.display = 'block';
-      document.getElementById('s1').className = 'step done';
-      document.getElementById('s2').className = 'step active';
-    }
-  });
+  if(!id||!name){ document.getElementById('err1').style.display='block'; return; }
+  document.getElementById('err1').style.display='none';
+  const r = await fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:id,name,location:loc})});
+  const d = await r.json();
+  if(d.ok){ show('s2'); setBar(2); }
 }
 
-async function goStep3(skip=false){
-  document.getElementById('s2').className = 'step done';
-  document.getElementById('s3').className = 'step active';
+async function step2(skip=false){
+  if(!skip){
+    const pw1 = document.getElementById('pw1').value;
+    const pw2 = document.getElementById('pw2').value;
+    if(pw1 !== pw2){ document.getElementById('err2').style.display='block'; return; }
+    document.getElementById('err2').style.display='none';
+    if(pw1){
+      await fetch('/api/setup-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw1})});
+    }
+  }
+  show('s3'); setBar(3);
+}
 
+async function step3(skip=false){
   if(!skip){
     const ssid = document.getElementById('wifi_ssid').value.trim();
     const pass = document.getElementById('wifi_pass').value;
     if(ssid){
-      await fetch('/api/wifi/connect', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ssid, password: pass})
-      });
+      await fetch('/api/wifi/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid,password:pass})});
     }
   }
-
-  document.getElementById('step2').style.display = 'none';
-  document.getElementById('step3').style.display = 'block';
-  document.getElementById('s3').className = 'step done';
+  show('s4'); setBar(4);
 }
 </script>
 </body>

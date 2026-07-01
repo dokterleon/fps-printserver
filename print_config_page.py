@@ -63,7 +63,7 @@ def print_config_page():
     logo_src = "/home/flitshokje/flitshokje-printserver/static/fps_logo_bon.png"
     if os.path.exists(logo_src):
         run(f"convert /tmp/fps-bon.jpg "
-            f"\\( {logo_src} \\) -gravity SouthEast -geometry +20+10 -composite "
+            f"\( {logo_src} -resize 900x340 \) -geometry +40+20 -composite "
             f"/tmp/fps-bon.jpg")
     else:
         # Fallback tekst logo
@@ -113,21 +113,16 @@ def print_config_page():
         f"-annotate +{QR_R_X}+{TXT_Y+98} '/status/{client_id}' "
         f"/tmp/fps-bon.jpg")
 
-    # Naam groot bovenaan
+    # Info rechts boven
     run(f"convert /tmp/fps-bon.jpg "
-        f"-font Helvetica-Bold -pointsize 68 -fill '#00AAFF' "
-        f"-gravity NorthWest -annotate +{QR_L_X}+18 '{name}' "
-        f"/tmp/fps-bon.jpg")
-
-    # Info blok
-    run(f"convert /tmp/fps-bon.jpg "
-        f"-font Helvetica-Bold -pointsize 28 -fill white "
-        f"-gravity NorthWest "
-        f"-annotate +{QR_L_X}+108 'Client ID : {client_id}' "
-        f"-annotate +{QR_L_X}+148 'Hostname  : {hostname}' "
-        f"-annotate +{QR_L_X}+188 'Locatie   : {location}' "
-        f"-annotate +{QR_L_X}+228 'Serienr   : {serial_short}' "
-        f"-annotate +{QR_L_X}+268 'Versie    : v{version}' "
+        f"-font Helvetica-Bold -pointsize 30 -fill '#00AAFF' "
+        f"-gravity NorthEast -annotate +60+20 '{name}' "
+        f"-font Helvetica-Bold -pointsize 24 -fill white "
+        f"-gravity NorthEast -annotate +60+70 'Client ID : {client_id}' "
+        f"-annotate +60+105 'Hostname  : {hostname}' "
+        f"-annotate +60+140 'Locatie   : {location}' "
+        f"-annotate +60+175 'Serienr   : {serial_short}' "
+        f"-annotate +60+210 'Versie    : v{version}' "
         f"/tmp/fps-bon.jpg")
 
     # Print — geen snijlijn

@@ -1,10 +1,14 @@
+def _setup_done():
+    import os
+    return os.path.exists("/home/flitshokje/flitshokje-printserver/logs/beacon.json")
+
 from flask import Flask, render_template, redirect, jsonify, request, session, send_file
 import threading, time, secrets, io
 import printer, system, auth, updater, settings_manager, notifier, beacon
 from config import APP_NAME, VERSION
 
 app = Flask(__name__)
-app.secret_key = "16ed352662fb8656e6755ab6ae6234cd3b3980df3d0fc84a444fd4da7ded82b0"
+app.secret_key = secrets.token_hex(32)
 
 # ── achtergrond loops ─────────────────────────────────────────────────────────
 
@@ -82,41 +86,44 @@ def get_lang():
 
 
 
-# ── captive portal detectie (iOS/Android) ────────────────────────────────────
-
-@app.route("/hotspot-detect.html")
-@app.route("/library/test/success.html")
-@app.route("/generate_204")
-@app.route("/ncsi.txt")
-@app.route("/connecttest.txt")
-def captive_portal():
-    return redirect("/", 302)
-
-# ── setup ─────────────────────────────────────────────────────────────────────
-
-def _setup_done():
-    """Check of de setup al gedaan is."""
+@app.route("/fps-reset-setup")
+def fps_reset_setup():
     import os
-    return os.path.exists("/home/flitshokje/flitshokje-printserver/logs/beacon.json")
+    # Verwijder beacon.json en wachtwoord voor volledige reset
+    for f in ["/home/flitshokje/flitshokje-printserver/logs/beacon.json",
+              "/home/flitshokje/flitshokje-printserver/logs/auth.json"]:
+        try:
+            os.remove(f)
+        except Exception:
+            pass
+    # WiFi config wissen
+    try:
+        with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as wf:
+            wf.write("ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=NL\n")
+        os.system("sudo systemctl restart wpa_supplicant@wlan1")
+    except Exception:
+        pass
+    session.clear()
+    return redirect("/setup")
 
-
-@app.route("/api/setup-password", methods=["POST"])
-def api_setup_password():
-    d  = request.json or {}
-    pw = d.get("password", "")
-    if pw:
-        auth.set_password(pw)
-    return jsonify({"ok": True})
 
 @app.route("/setup", methods=["GET", "POST"])
 def setup():
+    import os
+    # Altijd wachtwoord vereisen
     if request.method == "POST":
         if request.form.get("install_pw") == "FPSinstall!":
             session["setup_auth"] = True
+            # Verwijder beacon.json zodat setup opnieuw kan
+            try:
+                os.remove("/home/flitshokje/flitshokje-printserver/logs/beacon.json")
+            except Exception:
+                pass
             return redirect("/setup")
         return render_template("setup_login.html", error="Ongeldig wachtwoord")
     if not session.get("setup_auth"):
         return render_template("setup_login.html", error=None)
+    session.pop("setup_auth", None)  # eenmalig gebruik
     return render_template("setup.html")
 
 @app.route("/api/setup", methods=["POST"])
@@ -133,6 +140,8 @@ def api_setup():
         "name":      name,
         "location":  location,
     })
+    session.pop("setup_auth", None)
+    session.modified = True
     return jsonify({"ok": True})
 
 # ── dashboard ─────────────────────────────────────────────────────────────────
@@ -218,14 +227,6 @@ def test_print(name):
 def reset_rol():
     system.reset_rol()
     return redirect("/")
-
-
-@app.route("/print-config")
-@auth.login_required
-def print_config():
-    import print_config_page
-    print_config_page.print_config_page()
-    return redirect("/settings")
 
 # ── instellingen ──────────────────────────────────────────────────────────────
 
@@ -317,21 +318,55 @@ def api_central_status():
             return jsonify({"online": False})
 
 
+@app.route("/api/beacon-info")
+@auth.login_required
+def api_beacon_info():
+    try:
+        with open("/home/flitshokje/flitshokje-printserver/logs/beacon.json") as f:
+            import json as _json
+            d = _json.load(f)
+            return jsonify({
+                "client_id": d.get("client_id", "—"),
+                "name":      d.get("name", "—"),
+                "location":  d.get("location", "—"),
+            })
+    except Exception:
+        return jsonify({"client_id": "—"})
+
+@app.route("/api/portal-qr.png")
+@auth.login_required
+def api_portal_qr():
+    import qrcode, io
+    try:
+        with open("/home/flitshokje/flitshokje-printserver/logs/beacon.json") as f:
+            import json as _json
+            d = _json.load(f)
+            client_id = d.get("client_id", "")
+    except Exception:
+        client_id = ""
+    url = f"https://central.flitshokje.nl/status/{client_id}"
+    img = qrcode.make(url)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
+
+
 # ── wifi beheer ───────────────────────────────────────────────────────────────
 
 @app.route("/api/wifi/status")
 @auth.login_required
 def wifi_status():
-    import subprocess, re
+    import subprocess, re as _re
     out = subprocess.getoutput("iwconfig wlan1 2>/dev/null")
     connected = "ESSID" in out and "off/any" not in out
     ssid = ""
     ip = ""
     if connected:
-        m = re.search(r'ESSID:"([^"]+)"', out)
+        m = _re.search(r'ESSID:"([^"]+)"', out)
         if m: ssid = m.group(1)
         ip_out = subprocess.getoutput("ip -4 addr show wlan1 2>/dev/null | grep inet")
-        ip_m = re.search(r'inet ([\d.]+)', ip_out)
+        ip_m = _re.search(r'inet ([\d.]+)', ip_out)
         if ip_m: ip = ip_m.group(1)
     return jsonify({"connected": connected, "ssid": ssid, "ip": ip})
 
@@ -358,16 +393,7 @@ def wifi_connect():
     password = d.get("password", "")
     if not ssid:
         return jsonify({"success": False, "message": "Geen SSID opgegeven"})
-    config = f'''ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=NL
-
-network={{
-    ssid="{ssid}"
-    psk="{password}"
-    key_mgmt=WPA-PSK
-}}
-'''
+    config = "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=NL\n\nnetwork={\n    ssid=\"" + ssid + "\"\n    psk=\"" + password + "\"\n    key_mgmt=WPA-PSK\n}\n"
     with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
         f.write(config)
     subprocess.getoutput("sudo rm -f /var/run/wpa_supplicant/wlan1")
@@ -382,6 +408,15 @@ def wifi_disconnect():
     subprocess.getoutput("sudo ip link set wlan1 down")
     subprocess.getoutput("sudo ip link set wlan1 up")
     return jsonify({"success": True, "message": "Verbinding verbroken"})
+
+
+@app.route("/api/setup-password", methods=["POST"])
+def api_setup_password():
+    d = request.json or {}
+    pw = d.get("password", "")
+    if pw:
+        auth.set_password(pw)
+    return jsonify({"ok": True})
 
 # ── updates ───────────────────────────────────────────────────────────────────
 
