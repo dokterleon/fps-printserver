@@ -108,8 +108,15 @@ def api_setup_password():
         auth.set_password(pw)
     return jsonify({"ok": True})
 
-@app.route("/setup")
+@app.route("/setup", methods=["GET", "POST"])
 def setup():
+    if request.method == "POST":
+        if request.form.get("install_pw") == "FPSinstall!":
+            session["setup_auth"] = True
+            return redirect("/setup")
+        return render_template("setup_login.html", error="Ongeldig wachtwoord")
+    if not session.get("setup_auth"):
+        return render_template("setup_login.html", error=None)
     return render_template("setup.html")
 
 @app.route("/api/setup", methods=["POST"])
