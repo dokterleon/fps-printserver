@@ -69,6 +69,15 @@ def _disk():
     return {"used": "—", "total": "—", "pct": 0}
 
 def _ip():
+    import re as _re
+    for iface in ["wlan1", "eth0"]:
+        out = subprocess.getoutput(f"ip -4 addr show {iface} 2>/dev/null | grep inet")
+        m = _re.search(r"inet ([0-9.]+)", out)
+        if m:
+            return m.group(1)
+    return "10.0.0.1"
+
+def _ip_backup():
     # eth0 eerst, anders wlan0
     for iface in ["eth0", "wlan0"]:
         out = run(f"ip -4 addr show {iface} 2>/dev/null | grep 'inet ' | awk '{{print $2}}' | cut -d/ -f1").strip()

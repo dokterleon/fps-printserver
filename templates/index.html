@@ -170,7 +170,19 @@
       <div class="qr-img"><img src="/api/qr.png" alt="QR"></div>
       <div>
         <div class="qr-ip" id="qr-ip">—</div>
+        <div class="qr-ip" id="lan-ip" style="font-size:13px;color:var(--muted);margin-top:4px;display:none">🔌 LAN: <span id="lan-ip-val">—</span></div>
         <div class="qr-hint">{{ _['qr_hint'] }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;display:none" id="portal-qr-card">
+    <div class="section-title">Status portaal</div>
+    <div class="qr-wrap">
+      <div class="qr-img"><img src="/api/portal-qr.png" alt="QR" style="width:80px;height:80px;display:block"></div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--t);font-family:monospace" id="portal-url">—</div>
+        <div class="qr-hint">Deel deze link zodat je klant de printer kan monitoren</div>
       </div>
     </div>
   </div>
@@ -329,5 +341,28 @@ pollStatus();
 pollSystem();
 setInterval(pollStatus,2000);
 setInterval(pollSystem,5000);
+
+async function loadPortalQR(){
+  try{
+    const b = await fetch('/api/beacon-info').then(r=>r.json());
+    if(b.client_id && b.client_id !== '—'){
+      const url = 'https://central.flitshokje.nl/status/' + b.client_id;
+      document.getElementById('portal-url').textContent = url;
+      document.getElementById('portal-qr-card').style.display = 'block';
+    }
+  }catch(e){}
+}
+loadPortalQR();
+
+async function loadLanIP(){
+  try{
+    const d = await fetch('/api/network-info').then(r=>r.json());
+    if(d.eth0){
+      document.getElementById('lan-ip').style.display = 'block';
+      document.getElementById('lan-ip-val').textContent = 'http://' + d.eth0;
+    }
+  }catch(e){}
+}
+loadLanIP();
 </script>
 {% endblock %}

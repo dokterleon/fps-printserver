@@ -56,6 +56,18 @@
       <div class="info-row"><span class="info-label">Uptime</span><span class="info-val">{{ sys.uptime }}</span></div>
       <div class="info-row"><span class="info-label">CPU</span><span class="info-val">{{ sys.temp }}°C</span></div>
       <div class="info-row"><span class="info-label">Client ID</span><span class="info-val" style="font-family:monospace">{{ beacon.client_id or '—' }}</span></div>
+      <form method="POST" style="margin-top:12px">
+        <input type="hidden" name="action" value="beacon">
+        <div class="field">
+          <label>{% if lang == 'en' %}Name{% else %}Naam{% endif %}</label>
+          <input type="text" name="name" value="{{ beacon.name or '' }}" placeholder="bijv. Fotostudio Jansen">
+        </div>
+        <div class="field">
+          <label>{% if lang == 'en' %}Location{% else %}Locatie{% endif %}</label>
+          <input type="text" name="location" value="{{ beacon.location or '' }}" placeholder="bijv. Amsterdam">
+        </div>
+        <button class="btn by" type="submit">{% if lang == 'en' %}Save{% else %}Opslaan{% endif %}</button>
+      </form>
       <div style="margin-top:12px">
         <a class="btn by" href="/print-config" onclick="return confirm('Weet je het zeker?')">🖨 {% if lang == 'en' %}Print config card{% else %}Print configuratiebon{% endif %}</a>
       </div>
