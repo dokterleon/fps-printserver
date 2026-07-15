@@ -8,7 +8,7 @@ import printer, system, auth, updater, settings_manager, notifier, beacon
 from config import APP_NAME, VERSION
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)
+app.secret_key = "169583ebf57ab7906a2a8c3d77c391a4a7a601fb92680ea3670779ccbe9a9357"
 
 # ── achtergrond loops ─────────────────────────────────────────────────────────
 
@@ -417,6 +417,14 @@ def api_setup_password():
     if pw:
         auth.set_password(pw)
     return jsonify({"ok": True})
+
+
+@app.route("/print-config")
+@auth.login_required
+def print_config():
+    import print_config_page
+    print_config_page.print_config_page()
+    return redirect("/settings")
 
 # ── updates ───────────────────────────────────────────────────────────────────
 

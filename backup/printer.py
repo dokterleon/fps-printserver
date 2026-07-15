@@ -22,6 +22,12 @@ BRAND_MODES = {
         "6x8": {"pagesize": "w432h576",      "label": "6×8 / 15×20", "desc": "Groot formaat", "cut": False},
         "6x9": {"pagesize": "w432h648",      "label": "6×9 / 15×23", "desc": "Extra groot",   "cut": False},
     },
+    "kodak": {
+        "4x6":  {"pagesize": "w288h432",      "label": "4x6 / 10x15", "desc": "Hele foto",        "cut": False},
+        "5x7":  {"pagesize": "w360h504",      "label": "5x7 / 13x18", "desc": "Middelgroot",      "cut": False},
+        "6x8":  {"pagesize": "w432h576",      "label": "6x8 / 15x20", "desc": "Groot formaat",    "cut": False},
+        "2x6":  {"pagesize": "w288h432-div2", "label": "2x6 strip x2","desc": "Twee strips",      "cut": True},
+    },
     "default": {
         "4x6": {"pagesize": "w288h432",      "label": "4×6 / 10×15", "desc": "Standaard foto", "cut": False},
         "5x7": {"pagesize": "w360h504",      "label": "5×7 / 13×18", "desc": "Middelgroot",    "cut": False},
@@ -46,8 +52,21 @@ def get_modes_for_printer(name):
     return supported if supported else modes
 
 def list_printers():
+    import subprocess as _sp
+    usb_out = _sp.getoutput("lsusb 2>/dev/null").lower()
     out = run("lpstat -p 2>/dev/null")
-    return [re.match(r"printer (\S+)", l).group(1) for l in out.splitlines() if re.match(r"printer (\S+)", l)]
+    result = []
+    for l in out.splitlines():
+        m = re.match(r"printer (\S+)", l)
+        if not m: continue
+        name = m.group(1)
+        brand = detect_brand(name)
+        if brand == "citizen" and "10ce" not in usb_out: continue
+        if brand == "kodak" and "29cc" not in usb_out and "kodak" not in usb_out: continue
+        if brand == "dnp" and "dnp" not in usb_out: continue
+        if brand == "mitsubishi" and "mitsubishi" not in usb_out: continue
+        result.append(name)
+    return result
 
 def _update_ppd(printer_name, ps):
     """Pas de PPD default aan zodat Gutenprint de juiste mode gebruikt."""
@@ -116,8 +135,24 @@ def printer_status(name):
     options = run(f"lpoptions -p {name} 2>/dev/null")
     stat    = run(f"lpstat -p {name} -l 2>/dev/null")
     queue   = run(f"lpstat -o {name} 2>/dev/null")
+    # Check of printer fysiek aangesloten is via USB vendor ID
+    import subprocess as _sp
+    usb_out = _sp.getoutput("lsusb 2>/dev/null").lower()
+    brand = detect_brand(name)
+    usb_connected = True
+    if brand == "citizen" and "10ce" not in usb_out:
+        usb_connected = False
+    elif brand == "kodak" and "29cc" not in usb_out and "kodak" not in usb_out:
+        usb_connected = False
+    elif brand == "dnp" and "dnp" not in usb_out:
+        usb_connected = False
+    elif brand == "mitsubishi" and "mitsubishi" not in usb_out:
+        usb_connected = False
+
     low = stat.lower()
-    if "printing" in low: state = "Printing"
+    if not usb_connected:
+        state = "Offline"
+    elif "printing" in low: state = "Printing"
     elif "disabled" in low or "paused" in low or "stopped" in low: state = "Paused/Error"
     else: state = "Ready"
     friendly_error = _friendly_error(stat) if state == "Paused/Error" else None
@@ -169,7 +204,7 @@ def status():
                 "current_mode": None, "mode_label": "—",
                 "modes": {}, "jobs": [], "job_count": 0, "raw_status": str(e),
             })
-    return {"all_printers": all_status, "history": _read_log()}
+    return {"all_printers": [p for p in all_status if p.get("state") != "Offline"] or all_status, "history": _read_log()}
 
 def _log(event, detail=""):
     os.makedirs("logs", exist_ok=True)

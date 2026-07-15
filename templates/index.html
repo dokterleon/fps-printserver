@@ -113,6 +113,11 @@
   <!-- Printer overzicht -->
   <div class="section-title">{{ _['printer_overview'] }}</div>
   <div class="printer-grid" id="printer-grid">
+    <div id="no-printer" style="display:none;grid-column:1/-1;text-align:center;padding:60px 20px;background:var(--s2);border:1px solid var(--b);border-radius:var(--r)">
+      <div style="font-size:48px;margin-bottom:16px">🖨</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--t)">{% if lang == "en" %}No printer connected{% else %}Geen printer aangesloten{% endif %}</div>
+      <div style="font-size:14px;color:var(--muted)">{% if lang == "en" %}Connect a printer via USB and refresh the page{% else %}Sluit een printer aan via USB en vernieuw de pagina{% endif %}</div>
+    </div>
     <div style="color:var(--muted);font-size:13px;padding:20px">Laden...</div>
   </div>
 
