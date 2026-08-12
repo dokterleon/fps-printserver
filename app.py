@@ -1,14 +1,53 @@
-def _setup_done():
-    import os
-    return os.path.exists("/home/flitshokje/flitshokje-printserver/logs/beacon.json")
-
 from flask import Flask, render_template, redirect, jsonify, request, session, send_file
 import threading, time, secrets, io
-import printer, system, auth, updater, settings_manager, notifier, beacon
+import printer, system, auth, updater, settings_manager
 from config import APP_NAME, VERSION
 
 app = Flask(__name__)
-app.secret_key = "169583ebf57ab7906a2a8c3d77c391a4a7a601fb92680ea3670779ccbe9a9357"
+# ── licentie check bij opstarten ─────────────────────────────────────────────
+def get_hardware_id():
+    import subprocess, re
+    try:
+        # MAC adres wlan0
+        mac = subprocess.getoutput("cat /sys/class/net/wlan0/address 2>/dev/null").strip()
+        # Pi CPU serienummer
+        cpu = subprocess.getoutput("grep Serial /proc/cpuinfo 2>/dev/null | awk '{print $3}'").strip()
+        return f"{mac}-{cpu}"
+    except:
+        return "unknown"
+
+def check_licence():
+    import requests, json
+    try:
+        beacon = json.load(open("logs/beacon.json"))
+        client_id = beacon.get("client_id", "")
+        if not client_id:
+            return True  # Geen client_id ingesteld — doorlaten
+        hw_id = get_hardware_id()
+        r = requests.post(
+            "https://central.flitshokje.nl/api/validate",
+            json={"client_id": client_id, "hardware_id": hw_id},
+            headers={"X-API-Key": "flitshokje-secret-2026"},
+            timeout=10
+        )
+        data = r.json()
+        if not data.get("valid", False):
+            reason = data.get("reason", "unknown")
+            print(f"[FPS] Licentie ongeldig: {reason}")
+            open("/tmp/fps_licence_status", "w").write(reason)
+            return False
+        open("/tmp/fps_licence_status", "w").write("ok")
+        return True
+    except Exception as e:
+        # Geen internet — grace period van 7 dagen
+        print(f"[FPS] Licentie check mislukt: {e} — grace period actief")
+        open("/tmp/fps_licence_status", "w").write("grace")
+        return True  # Doorlaten bij geen internet
+
+LICENCE_VALID = check_licence()
+
+
+app.secret_key = "7e3de051d8746524f1d21fc26e1fc1ecf65152f941828acd696ca2bd8a631c82"
 
 # ── achtergrond loops ─────────────────────────────────────────────────────────
 
@@ -21,17 +60,17 @@ def auto_resume_loop():
                         s = printer.printer_status(name)
                         if s["state"] == "Paused/Error":
                             printer.resume(name)
-                            if notifier.is_configured():
-                                ns = notifier._load()
-                                if ns.get("notify_printer_error", True):
-                                    notifier.notify_printer_error(name, s.get("friendly_error") or "Printer gepauzeerd")
                     except Exception:
                         pass
         except Exception:
             pass
         time.sleep(3)
 
+def auto_update_loop():
+    updater.auto_update_loop(settings_manager.load)
+
 def print_count_loop():
+    import time
     prev_jobs = {}
     while True:
         try:
@@ -40,23 +79,14 @@ def print_count_loop():
                 curr = s["job_count"]
                 prev = prev_jobs.get(name, curr)
                 if prev > curr:
+                    # job(s) afgerond
                     for _ in range(prev - curr):
                         printer._log("print", f"{name}: {s['mode_label'] or 'print'}")
                         system.increment_rol()
                 prev_jobs[name] = curr
-                if s["low_paper"] and notifier.is_configured():
-                    ns = notifier._load()
-                    if ns.get("notify_low_paper", True):
-                        notifier.notify_low_paper(name, s["remaining"])
         except Exception:
             pass
         time.sleep(2)
-
-def auto_update_loop():
-    updater.auto_update_loop(settings_manager.load)
-
-def beacon_loop():
-    beacon.beacon_loop(printer.status, system.get_system_status)
 
 # ── auth ──────────────────────────────────────────────────────────────────────
 
@@ -67,13 +97,15 @@ def login():
         if auth.check_password(request.form.get("password", "")):
             session["logged_in"] = True
             return redirect("/")
-        error = "Ongeldig wachtwoord" if get_lang() == "nl" else "Invalid password"
+        error = "Ongeldig wachtwoord" if session.get("lang","nl") == "nl" else "Invalid password"
     return render_template("login.html", app_name=APP_NAME, error=error)
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
+
+# ── taal ──────────────────────────────────────────────────────────────────────
 
 @app.route("/lang/<lang>")
 def set_lang(lang):
@@ -84,73 +116,11 @@ def set_lang(lang):
 def get_lang():
     return session.get("lang", settings_manager.get("language"))
 
-
-
-@app.route("/fps-reset-setup")
-def fps_reset_setup():
-    import os
-    # Verwijder beacon.json en wachtwoord voor volledige reset
-    for f in ["/home/flitshokje/flitshokje-printserver/logs/beacon.json",
-              "/home/flitshokje/flitshokje-printserver/logs/auth.json"]:
-        try:
-            os.remove(f)
-        except Exception:
-            pass
-    # WiFi config wissen
-    try:
-        with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as wf:
-            wf.write("ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=NL\n")
-        os.system("sudo systemctl restart wpa_supplicant@wlan1")
-    except Exception:
-        pass
-    session.clear()
-    return redirect("/setup")
-
-
-@app.route("/setup", methods=["GET", "POST"])
-def setup():
-    import os
-    # Altijd wachtwoord vereisen
-    if request.method == "POST":
-        if request.form.get("install_pw") == "FPSinstall!":
-            session["setup_auth"] = True
-            # Verwijder beacon.json zodat setup opnieuw kan
-            try:
-                os.remove("/home/flitshokje/flitshokje-printserver/logs/beacon.json")
-            except Exception:
-                pass
-            return redirect("/setup")
-        return render_template("setup_login.html", error="Ongeldig wachtwoord")
-    if not session.get("setup_auth"):
-        return render_template("setup_login.html", error=None)
-    session.pop("setup_auth", None)  # eenmalig gebruik
-    return render_template("setup.html")
-
-@app.route("/api/setup", methods=["POST"])
-def api_setup():
-    import json as _json
-    d = request.json or {}
-    client_id = d.get("client_id", "").strip().replace(" ", "-")
-    name      = d.get("name", "").strip()
-    location  = d.get("location", "").strip()
-    if not client_id or not name:
-        return jsonify({"ok": False, "error": "Vul alle velden in"})
-    beacon.save_settings({
-        "client_id": client_id,
-        "name":      name,
-        "location":  location,
-    })
-    session.pop("setup_auth", None)
-    session.modified = True
-    return jsonify({"ok": True})
-
 # ── dashboard ─────────────────────────────────────────────────────────────────
 
 @app.route("/")
 @auth.login_required
 def index():
-    if not _setup_done():
-        return redirect("/setup")
     return render_template("index.html", app_name=APP_NAME, version=VERSION, lang=get_lang())
 
 @app.route("/api/status")
@@ -174,6 +144,8 @@ def api_qr():
     buf.seek(0)
     return send_file(buf, mimetype="image/png")
 
+# ── printer detail pagina ─────────────────────────────────────────────────────
+
 @app.route("/printer/<name>")
 @auth.login_required
 def printer_detail(name):
@@ -189,6 +161,13 @@ def api_printer(name):
         return jsonify({"error": str(e)}), 500
 
 # ── printer acties ────────────────────────────────────────────────────────────
+
+@app.route("/print-config")
+@auth.login_required
+def print_config():
+    import print_config_page
+    ok, msg = print_config_page.print_config_page()
+    return redirect("/settings")
 
 @app.route("/mode/<name>/<mode>")
 @auth.login_required
@@ -228,7 +207,7 @@ def reset_rol():
     system.reset_rol()
     return redirect("/")
 
-# ── instellingen ──────────────────────────────────────────────────────────────
+
 
 @app.route("/settings", methods=["GET", "POST"])
 @auth.login_required
@@ -245,12 +224,12 @@ def settings():
             pw2 = request.form.get("password2", "")
             if pw and pw == pw2:
                 auth.set_password(pw)
-                msg = "Wachtwoord ingesteld"
+                msg = "Wachtwoord ingesteld" if lang=="nl" else "Password set"
             elif pw != pw2:
-                msg = "Wachtwoorden komen niet overeen"
+                msg = "Wachtwoorden komen niet overeen" if lang=="nl" else "Passwords do not match"
         elif action == "disable_password":
             auth.disable()
-            msg = "Wachtwoord uitgeschakeld"
+            msg = "Wachtwoord uitgeschakeld" if lang=="nl" else "Password disabled"
         elif action == "general":
             settings_manager.save({
                 "auto_update": "auto_update" in request.form,
@@ -258,173 +237,15 @@ def settings():
                 "language":    request.form.get("language", "nl"),
             })
             session["lang"] = request.form.get("language", "nl")
-            msg = "Opgeslagen"
-        elif action == "notifications":
-            notifier.save_settings({
-                "gmail_user":           request.form.get("gmail_user", ""),
-                "gmail_pass":           request.form.get("gmail_pass", ""),
-                "to_email":             request.form.get("to_email", ""),
-                "notify_low_paper":     "notify_low_paper"     in request.form,
-                "notify_printer_error": "notify_printer_error" in request.form,
-            })
-            msg = "Notificaties opgeslagen"
-        elif action == "test_notification":
-            ok, result = notifier.notify_test()
-            msg = f"✓ Test verstuurd" if ok else f"✕ {result}"
-        elif action == "beacon":
-            beacon.save_settings({
-                "central_url": request.form.get("central_url", ""),
-                "api_key":     request.form.get("api_key", ""),
-                "client_id":   request.form.get("client_id", ""),
-                "name":        request.form.get("client_name", ""),
-                "location":    request.form.get("location", ""),
-            })
-            msg = "Centrale server instellingen opgeslagen"
+            msg = "Opgeslagen" if lang=="nl" else "Saved"
 
     sys_info     = system.get_system_status()
     cur_settings = settings_manager.load()
-    notif        = notifier.get_settings()
-    beacon_cfg   = beacon.get_settings()
     return render_template("settings.html",
         app_name=APP_NAME, version=VERSION, lang=lang,
         sys=sys_info, msg=msg,
         auth_enabled=auth.is_enabled(),
-        settings=cur_settings,
-        notif=notif,
-        beacon=beacon_cfg)
-
-
-@app.route("/api/central-status")
-@auth.login_required
-def api_central_status():
-    import urllib.request
-    try:
-        req = urllib.request.Request(
-            "https://central.flitshokje.nl/api/ping",
-            data=b'{}',
-            headers={"Content-Type": "application/json", "X-API-Key": ""},
-            method="POST"
-        )
-        urllib.request.urlopen(req, timeout=3)
-        return jsonify({"online": True})
-    except Exception:
-        # ping endpoint bestaat maar geeft 401 = centrale is online
-        try:
-            urllib.request.urlopen("https://central.flitshokje.nl", timeout=3)
-            return jsonify({"online": True})
-        except Exception as e:
-            if "401" in str(e) or "403" in str(e):
-                return jsonify({"online": True})
-            return jsonify({"online": False})
-
-
-@app.route("/api/beacon-info")
-@auth.login_required
-def api_beacon_info():
-    try:
-        with open("/home/flitshokje/flitshokje-printserver/logs/beacon.json") as f:
-            import json as _json
-            d = _json.load(f)
-            return jsonify({
-                "client_id": d.get("client_id", "—"),
-                "name":      d.get("name", "—"),
-                "location":  d.get("location", "—"),
-            })
-    except Exception:
-        return jsonify({"client_id": "—"})
-
-@app.route("/api/portal-qr.png")
-@auth.login_required
-def api_portal_qr():
-    import qrcode, io
-    try:
-        with open("/home/flitshokje/flitshokje-printserver/logs/beacon.json") as f:
-            import json as _json
-            d = _json.load(f)
-            client_id = d.get("client_id", "")
-    except Exception:
-        client_id = ""
-    url = f"https://central.flitshokje.nl/status/{client_id}"
-    img = qrcode.make(url)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return send_file(buf, mimetype="image/png")
-
-
-# ── wifi beheer ───────────────────────────────────────────────────────────────
-
-@app.route("/api/wifi/status")
-@auth.login_required
-def wifi_status():
-    import subprocess, re as _re
-    out = subprocess.getoutput("iwconfig wlan1 2>/dev/null")
-    connected = "ESSID" in out and "off/any" not in out
-    ssid = ""
-    ip = ""
-    if connected:
-        m = _re.search(r'ESSID:"([^"]+)"', out)
-        if m: ssid = m.group(1)
-        ip_out = subprocess.getoutput("ip -4 addr show wlan1 2>/dev/null | grep inet")
-        ip_m = _re.search(r'inet ([\d.]+)', ip_out)
-        if ip_m: ip = ip_m.group(1)
-    return jsonify({"connected": connected, "ssid": ssid, "ip": ip})
-
-@app.route("/api/wifi/scan")
-@auth.login_required
-def wifi_scan():
-    import subprocess
-    out = subprocess.getoutput("sudo iwlist wlan1 scan 2>/dev/null | grep ESSID")
-    networks = []
-    for line in out.splitlines():
-        line = line.strip()
-        if 'ESSID:"' in line:
-            ssid = line.split('"')[1]
-            if ssid and ssid not in networks:
-                networks.append(ssid)
-    return jsonify({"networks": networks})
-
-@app.route("/api/wifi/connect", methods=["POST"])
-@auth.login_required
-def wifi_connect():
-    import subprocess
-    d = request.json or {}
-    ssid = d.get("ssid", "")
-    password = d.get("password", "")
-    if not ssid:
-        return jsonify({"success": False, "message": "Geen SSID opgegeven"})
-    config = "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=NL\n\nnetwork={\n    ssid=\"" + ssid + "\"\n    psk=\"" + password + "\"\n    key_mgmt=WPA-PSK\n}\n"
-    with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
-        f.write(config)
-    subprocess.getoutput("sudo rm -f /var/run/wpa_supplicant/wlan1")
-    subprocess.getoutput("sudo systemctl restart wpa_supplicant@wlan1")
-    subprocess.getoutput("sudo dhcpcd wlan1")
-    return jsonify({"success": True, "message": f"Verbinden met {ssid}..."})
-
-@app.route("/api/wifi/disconnect", methods=["POST"])
-@auth.login_required
-def wifi_disconnect():
-    import subprocess
-    subprocess.getoutput("sudo ip link set wlan1 down")
-    subprocess.getoutput("sudo ip link set wlan1 up")
-    return jsonify({"success": True, "message": "Verbinding verbroken"})
-
-
-@app.route("/api/setup-password", methods=["POST"])
-def api_setup_password():
-    d = request.json or {}
-    pw = d.get("password", "")
-    if pw:
-        auth.set_password(pw)
-    return jsonify({"ok": True})
-
-
-@app.route("/print-config")
-@auth.login_required
-def print_config():
-    import print_config_page
-    print_config_page.print_config_page()
-    return redirect("/settings")
+        settings=cur_settings)
 
 # ── updates ───────────────────────────────────────────────────────────────────
 
@@ -459,8 +280,6 @@ def api_logs():
 
 if __name__ == "__main__":
     threading.Thread(target=auto_resume_loop, daemon=True).start()
-    threading.Thread(target=print_count_loop, daemon=True).start()
     threading.Thread(target=auto_update_loop, daemon=True).start()
-    threading.Thread(target=beacon_loop,      daemon=True).start()
+    threading.Thread(target=print_count_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=80)
-# Bovenstaande wordt toegevoegd aan de bestaande routes sectie

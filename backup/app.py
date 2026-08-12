@@ -4,7 +4,50 @@ import printer, system, auth, updater, settings_manager
 from config import APP_NAME, VERSION
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)
+# ── licentie check bij opstarten ─────────────────────────────────────────────
+def get_hardware_id():
+    import subprocess, re
+    try:
+        # MAC adres wlan0
+        mac = subprocess.getoutput("cat /sys/class/net/wlan0/address 2>/dev/null").strip()
+        # Pi CPU serienummer
+        cpu = subprocess.getoutput("grep Serial /proc/cpuinfo 2>/dev/null | awk '{print $3}'").strip()
+        return f"{mac}-{cpu}"
+    except:
+        return "unknown"
+
+def check_licence():
+    import requests, json
+    try:
+        beacon = json.load(open("logs/beacon.json"))
+        client_id = beacon.get("client_id", "")
+        if not client_id:
+            return True  # Geen client_id ingesteld — doorlaten
+        hw_id = get_hardware_id()
+        r = requests.post(
+            "https://central.flitshokje.nl/api/validate",
+            json={"client_id": client_id, "hardware_id": hw_id},
+            headers={"X-API-Key": "flitshokje-secret-2026"},
+            timeout=10
+        )
+        data = r.json()
+        if not data.get("valid", False):
+            reason = data.get("reason", "unknown")
+            print(f"[FPS] Licentie ongeldig: {reason}")
+            open("/tmp/fps_licence_status", "w").write(reason)
+            return False
+        open("/tmp/fps_licence_status", "w").write("ok")
+        return True
+    except Exception as e:
+        # Geen internet — grace period van 7 dagen
+        print(f"[FPS] Licentie check mislukt: {e} — grace period actief")
+        open("/tmp/fps_licence_status", "w").write("grace")
+        return True  # Doorlaten bij geen internet
+
+LICENCE_VALID = check_licence()
+
+
+app.secret_key = "7e3de051d8746524f1d21fc26e1fc1ecf65152f941828acd696ca2bd8a631c82"
 
 # ── achtergrond loops ─────────────────────────────────────────────────────────
 
@@ -165,14 +208,6 @@ def reset_rol():
     return redirect("/")
 
 
-@app.route("/print-config")
-@auth.login_required
-def print_config():
-    import print_config_page
-    ok, msg = print_config_page.print_config_page()
-    return redirect("/settings")
-
-# ── instellingen ──────────────────────────────────────────────────────────────
 
 @app.route("/settings", methods=["GET", "POST"])
 @auth.login_required
