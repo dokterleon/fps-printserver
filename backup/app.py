@@ -245,7 +245,9 @@ def settings():
         app_name=APP_NAME, version=VERSION, lang=lang,
         sys=sys_info, msg=msg,
         auth_enabled=auth.is_enabled(),
-        settings=cur_settings)
+        settings=cur_settings,
+        notif=__import__("notifier")._load() if hasattr(__import__("notifier"), "_load") else {"configured": False},
+        beacon=__import__("json").load(open("logs/beacon.json")) if __import__("os").path.exists("logs/beacon.json") else {"client_id":"","name":"","location":""})
 
 # ── updates ───────────────────────────────────────────────────────────────────
 
