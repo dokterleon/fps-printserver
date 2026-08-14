@@ -249,6 +249,25 @@ def settings():
         notif=__import__("notifier")._load() if hasattr(__import__("notifier"), "_load") else {"configured": False},
         beacon=__import__("json").load(open("logs/beacon.json")) if __import__("os").path.exists("logs/beacon.json") else {"client_id":"","name":"","location":""})
 
+
+@app.route("/api/licence")
+def api_licence():
+    import os
+    try:
+        status = open("/tmp/fps_licence_status").read().strip()
+    except:
+        status = "unknown"
+    messages = {
+        "ok":                {"level": "ok",      "nl": "Licentie geldig",                    "en": "Licence valid"},
+        "grace":             {"level": "warning",  "nl": "Geen internet — grace period actief","en": "No internet — grace period active"},
+        "hardware_mismatch": {"level": "error",    "nl": "Hardware mismatch — mogelijke clone detectie", "en": "Hardware mismatch — possible clone detected"},
+        "blocked":           {"level": "error",    "nl": "Unit geblokkeerd — neem contact op met FPS",   "en": "Unit blocked — contact FPS"},
+        "unknown_client":    {"level": "error",    "nl": "Onbekend serienummer — neem contact op met FPS","en": "Unknown serial — contact FPS"},
+        "expired":           {"level": "error",    "nl": "Licentie verlopen — neem contact op met FPS",  "en": "Licence expired — contact FPS"},
+    }
+    info = messages.get(status, {"level": "warning", "nl": "Status onbekend", "en": "Status unknown"})
+    return jsonify({"status": status, **info})
+
 # ── updates ───────────────────────────────────────────────────────────────────
 
 @app.route("/api/check-update")
