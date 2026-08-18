@@ -97,7 +97,7 @@ echo "╔═══════════════════════�
 echo "║         Unit configuratie            ║"
 echo "╚══════════════════════════════════════╝"
 echo "Serienummer invoeren:"
-read -p "FPS-2026-" serial </dev/tty </dev/tty
+read -p "FPS-2026-" serial </dev/tty
 serial="FPS-2026-$serial"
 
 if [ -z "$serial" ] || [ "$serial" = "FPS-2026-" ]; then
@@ -109,7 +109,7 @@ echo "🔍 Controleren of $serial al bestaat..."
 response=$(curl -s "https://central.flitshokje.nl/api/status/$serial")
 if echo "$response" | grep -q '"client_id"'; then
   echo "⚠️  $serial bestaat al!"
-  read -p "Toch doorgaan? (j/n): " confirm </dev/tty </dev/tty
+  read -p "Toch doorgaan? (j/n): " confirm </dev/tty
   if [ "$confirm" != "j" ]; then
     echo "❌ Geannuleerd."
     exit 1
