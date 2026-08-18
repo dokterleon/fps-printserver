@@ -96,7 +96,8 @@ echo ""
 echo "╔══════════════════════════════════════╗"
 echo "║         Unit configuratie            ║"
 echo "╚══════════════════════════════════════╝"
-read -p "Serienummer: FPS-2026-" serial
+echo "Serienummer invoeren:"
+read -p "FPS-2026-" serial </dev/tty </dev/tty
 serial="FPS-2026-$serial"
 
 if [ -z "$serial" ] || [ "$serial" = "FPS-2026-" ]; then
@@ -108,7 +109,7 @@ echo "🔍 Controleren of $serial al bestaat..."
 response=$(curl -s "https://central.flitshokje.nl/api/status/$serial")
 if echo "$response" | grep -q '"client_id"'; then
   echo "⚠️  $serial bestaat al!"
-  read -p "Toch doorgaan? (j/n): " confirm
+  read -p "Toch doorgaan? (j/n): " confirm </dev/tty </dev/tty
   if [ "$confirm" != "j" ]; then
     echo "❌ Geannuleerd."
     exit 1
@@ -131,4 +132,4 @@ echo "║  🌐 Dashboard: http://$(hostname -I | awk '{print $1}')"
 echo "╚══════════════════════════════════════╝"
 
 # Script verwijdert zichzelf
-rm -- "$0"
+# Script verwijderd
