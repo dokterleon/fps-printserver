@@ -268,6 +268,61 @@ def api_licence():
     info = messages.get(status, {"level": "warning", "nl": "Status onbekend", "en": "Status unknown"})
     return jsonify({"status": status, **info})
 
+
+# ── wifi routes ───────────────────────────────────────────────────────────────
+@app.route("/api/wifi/status")
+@auth.login_required
+def api_wifi_status():
+    import subprocess
+    out = subprocess.getoutput("iwgetid wlan1 --raw 2>/dev/null").strip()
+    ip = subprocess.getoutput("ip -4 addr show wlan1 2>/dev/null | grep inet | awk '{print $2}' | cut -d/ -f1").strip()
+    return jsonify({"connected": bool(out), "ssid": out or "", "ip": ip or ""})
+
+@app.route("/api/wifi/scan")
+@auth.login_required
+def api_wifi_scan():
+    import subprocess
+    out = subprocess.getoutput("sudo iwlist wlan1 scan 2>/dev/null | grep ESSID | awk -F'\"' '{print $2}'")
+    networks = [n.strip() for n in out.splitlines() if n.strip()]
+    networks = list(dict.fromkeys(networks))  # dedup
+    return jsonify({"networks": networks})
+
+@app.route("/api/wifi/connect", methods=["POST"])
+@auth.login_required
+def api_wifi_connect():
+    import subprocess
+    d = request.json or {}
+    ssid = d.get("ssid","")
+    password = d.get("password","")
+    if not ssid:
+        return jsonify({"ok": False, "error": "Geen SSID"})
+    conf = f'''ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=NL
+
+network={{
+    ssid="{ssid}"
+    psk="{password}"
+    key_mgmt=WPA-PSK
+}}'''
+    with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
+        f.write(conf)
+    subprocess.run(["sudo", "wpa_cli", "-i", "wlan1", "reconfigure"], capture_output=True)
+    return jsonify({"ok": True})
+
+@app.route("/api/wifi/disconnect", methods=["POST"])
+@auth.login_required
+def api_wifi_disconnect():
+    import subprocess
+    conf = """ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=NL
+"""
+    with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
+        f.write(conf)
+    subprocess.run(["sudo", "wpa_cli", "-i", "wlan1", "reconfigure"], capture_output=True)
+    return jsonify({"ok": True})
+
 # ── updates ───────────────────────────────────────────────────────────────────
 
 @app.route("/api/check-update")
