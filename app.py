@@ -49,6 +49,38 @@ LICENCE_VALID = check_licence()
 
 app.secret_key = "7e3de051d8746524f1d21fc26e1fc1ecf65152f941828acd696ca2bd8a631c82"
 
+
+# ── simple beacon loop ────────────────────────────────────────────────────────
+def simple_beacon_loop():
+    import requests, json, time
+    while True:
+        try:
+            b = json.load(open("logs/beacon.json"))
+            s = printer.status()
+            printers = [p["printer"] for p in s.get("all_printers", [])]
+            sys_info = system.get_system_status()
+            requests.post(
+                "https://central.flitshokje.nl/api/ping",
+                json={
+                    "client_id": b.get("client_id",""),
+                    "name": b.get("name",""),
+                    "location": b.get("location",""),
+                    "ip": sys_info.get("ip",""),
+                    "version": VERSION,
+                    "printers": printers,
+                    "temp": sys_info.get("temp"),
+                    "uptime": sys_info.get("uptime",""),
+                    "disk_pct": sys_info.get("disk_pct", 0),
+                    "airprint": True,
+                    "errors": [],
+                },
+                headers={"X-API-Key": "flitshokje-secret-2026"},
+                timeout=10
+            )
+        except Exception:
+            pass
+        time.sleep(300)
+
 # ── achtergrond loops ─────────────────────────────────────────────────────────
 
 def auto_resume_loop():
@@ -268,61 +300,6 @@ def api_licence():
     info = messages.get(status, {"level": "warning", "nl": "Status onbekend", "en": "Status unknown"})
     return jsonify({"status": status, **info})
 
-
-# ── wifi routes ───────────────────────────────────────────────────────────────
-@app.route("/api/wifi/status")
-@auth.login_required
-def api_wifi_status():
-    import subprocess
-    out = subprocess.getoutput("iwgetid wlan1 --raw 2>/dev/null").strip()
-    ip = subprocess.getoutput("ip -4 addr show wlan1 2>/dev/null | grep inet | awk '{print $2}' | cut -d/ -f1").strip()
-    return jsonify({"connected": bool(out), "ssid": out or "", "ip": ip or ""})
-
-@app.route("/api/wifi/scan")
-@auth.login_required
-def api_wifi_scan():
-    import subprocess
-    out = subprocess.getoutput("sudo iwlist wlan1 scan 2>/dev/null | grep ESSID | awk -F'\"' '{print $2}'")
-    networks = [n.strip() for n in out.splitlines() if n.strip()]
-    networks = list(dict.fromkeys(networks))  # dedup
-    return jsonify({"networks": networks})
-
-@app.route("/api/wifi/connect", methods=["POST"])
-@auth.login_required
-def api_wifi_connect():
-    import subprocess
-    d = request.json or {}
-    ssid = d.get("ssid","")
-    password = d.get("password","")
-    if not ssid:
-        return jsonify({"ok": False, "error": "Geen SSID"})
-    conf = f'''ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=NL
-
-network={{
-    ssid="{ssid}"
-    psk="{password}"
-    key_mgmt=WPA-PSK
-}}'''
-    with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
-        f.write(conf)
-    subprocess.run(["sudo", "wpa_cli", "-i", "wlan1", "reconfigure"], capture_output=True)
-    return jsonify({"ok": True})
-
-@app.route("/api/wifi/disconnect", methods=["POST"])
-@auth.login_required
-def api_wifi_disconnect():
-    import subprocess
-    conf = """ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=NL
-"""
-    with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
-        f.write(conf)
-    subprocess.run(["sudo", "wpa_cli", "-i", "wlan1", "reconfigure"], capture_output=True)
-    return jsonify({"ok": True})
-
 # ── updates ───────────────────────────────────────────────────────────────────
 
 @app.route("/api/check-update")
@@ -356,6 +333,7 @@ def api_logs():
 
 if __name__ == "__main__":
     threading.Thread(target=auto_resume_loop, daemon=True).start()
+    threading.Thread(target=simple_beacon_loop, daemon=True).start()
     threading.Thread(target=auto_update_loop, daemon=True).start()
     threading.Thread(target=print_count_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=80)

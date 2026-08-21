@@ -49,6 +49,38 @@ LICENCE_VALID = check_licence()
 
 app.secret_key = "7e3de051d8746524f1d21fc26e1fc1ecf65152f941828acd696ca2bd8a631c82"
 
+
+# ── simple beacon loop ────────────────────────────────────────────────────────
+def simple_beacon_loop():
+    import requests, json, time
+    while True:
+        try:
+            b = json.load(open("logs/beacon.json"))
+            s = printer.status()
+            printers = [p["printer"] for p in s.get("all_printers", [])]
+            sys_info = system.get_system_status()
+            requests.post(
+                "https://central.flitshokje.nl/api/ping",
+                json={
+                    "client_id": b.get("client_id",""),
+                    "name": b.get("name",""),
+                    "location": b.get("location",""),
+                    "ip": sys_info.get("ip",""),
+                    "version": VERSION,
+                    "printers": printers,
+                    "temp": sys_info.get("temp"),
+                    "uptime": sys_info.get("uptime",""),
+                    "disk_pct": sys_info.get("disk_pct", 0),
+                    "airprint": True,
+                    "errors": [],
+                },
+                headers={"X-API-Key": "flitshokje-secret-2026"},
+                timeout=10
+            )
+        except Exception:
+            pass
+        time.sleep(300)
+
 # ── achtergrond loops ─────────────────────────────────────────────────────────
 
 def auto_resume_loop():
@@ -301,6 +333,7 @@ def api_logs():
 
 if __name__ == "__main__":
     threading.Thread(target=auto_resume_loop, daemon=True).start()
+    threading.Thread(target=simple_beacon_loop, daemon=True).start()
     threading.Thread(target=auto_update_loop, daemon=True).start()
     threading.Thread(target=print_count_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=80)
