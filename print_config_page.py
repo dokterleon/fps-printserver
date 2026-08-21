@@ -34,6 +34,11 @@ def print_config_page():
     client_id, name, location = get_client_info()
     hostname        = run("hostname").strip()
     hotspot_url     = "http://10.0.0.1"
+    import subprocess as _sp
+    lan_ip = _sp.getoutput("ip -4 addr show eth0 2>/dev/null | grep inet | awk '{print $2}' | cut -d/ -f1").strip()
+    wifi_ip = _sp.getoutput("ip -4 addr show wlan1 2>/dev/null | grep inet | awk '{print $2}' | cut -d/ -f1").strip()
+    extra_ip = wifi_ip or lan_ip or ""
+    extra_url = f"http://{extra_ip}" if extra_ip else ""
     portal_url      = f"https://central.flitshokje.nl/status/{client_id}"
     serial_short    = serial[-12:] if len(serial) > 12 else serial
 
@@ -118,12 +123,12 @@ def print_config_page():
         f"-font Helvetica-Bold -pointsize 30 -fill '#00AAFF' "
         f"-gravity NorthEast -annotate +60+20 '{name}' "
         f"-font Helvetica-Bold -pointsize 24 -fill white "
-        f"-gravity NorthEast -annotate +60+70 'Client ID : {client_id}' "
+        f"-gravity NorthEast -annotate +60+70 'FPS Serienummer : {client_id}' "
         f"-annotate +60+105 'Hostname  : {hostname}' "
         f"-annotate +60+140 'Locatie   : {location}' "
-        f"-annotate +60+175 'Serienr   : {serial_short}' "
-        f"-annotate +60+210 'Versie    : v{version}' "
-        f"/tmp/fps-bon.jpg")
+        f"-annotate +60+175 'Versie    : v{version}' "
+        + (f"-annotate +60+210 'LAN/WiFi  : {extra_url}' " if extra_url else "")
+        + f"/tmp/fps-bon.jpg")
 
     # Print — geen snijlijn
     printer = run("lpstat -p 2>/dev/null | awk '{print $2}' | head -1").strip()
