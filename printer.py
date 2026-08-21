@@ -61,7 +61,7 @@ def list_printers():
         if not m: continue
         name = m.group(1)
         brand = detect_brand(name)
-        if brand == "citizen" and "10ce" not in usb_out: continue
+        if brand == "citizen" and "10ce" not in usb_out and "1343" not in usb_out: continue
         if brand == "kodak" and "29cc" not in usb_out and "kodak" not in usb_out: continue
         if brand == "dnp" and "dnp" not in usb_out: continue
         if brand == "mitsubishi" and "mitsubishi" not in usb_out: continue
@@ -135,14 +135,14 @@ def printer_status(name):
     options = run(f"lpoptions -p {name} 2>/dev/null")
     stat    = run(f"lpstat -p {name} -l 2>/dev/null")
     queue   = run(f"lpstat -o {name} 2>/dev/null")
-    # Check of printer fysiek aangesloten is via USB vendor ID
+    # Check of printer fysiek aangesloten is via USB naam
     import subprocess as _sp
     usb_out = _sp.getoutput("lsusb 2>/dev/null").lower()
     brand = detect_brand(name)
     usb_connected = True
-    if brand == "citizen" and "10ce" not in usb_out:
+    if brand == "citizen" and "citizen" not in usb_out:
         usb_connected = False
-    elif brand == "kodak" and "29cc" not in usb_out and "kodak" not in usb_out:
+    elif brand == "kodak" and "kodak" not in usb_out:
         usb_connected = False
     elif brand == "dnp" and "dnp" not in usb_out:
         usb_connected = False
