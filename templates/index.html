@@ -382,8 +382,10 @@ async function loadLicence(){
 loadLicence();
 
 async function recheckLicence(){
+  const btn = event.target;
+  btn.textContent = '⏳ Controleren...';
   await fetch('/api/licence/recheck', {method:'POST'});
-  setTimeout(loadLicence, 5000);
+  setTimeout(() => { loadLicence(); }, 6000);
 }
 
 async function loadLanIP(){
