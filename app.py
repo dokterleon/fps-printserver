@@ -381,6 +381,16 @@ def wifi_connect_direct():
     subprocess.run(["sudo", "dhcpcd", "-n", "wlan1"])
     return jsonify({"ok": True})
 
+
+@app.route("/api/licence/recheck", methods=["POST"])
+def api_licence_recheck():
+    import threading
+    def recheck():
+        result = check_licence()
+        open("/tmp/fps_licence_status", "w").write("ok" if result else open("/tmp/fps_licence_status").read())
+    threading.Thread(target=recheck, daemon=True).start()
+    return jsonify({"ok": True, "message": "Licentie wordt opnieuw gecheckt"})
+
 # ── updates ───────────────────────────────────────────────────────────────────
 
 @app.route("/api/check-update")

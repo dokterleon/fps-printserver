@@ -376,10 +376,15 @@ async function loadLicence(){
     const icons = {warning:'⚠️', error:'🔒'};
     banner.className = 'lic-banner lic-' + d.level;
     banner.style.display = 'flex';
-    banner.innerHTML = (icons[d.level]||'ℹ️') + ' ' + msg + ' <span style="margin-left:auto;font-family:monospace;font-size:11px;opacity:.6">' + d.status + '</span>';
+    banner.innerHTML = (icons[d.level]||'ℹ️') + ' ' + msg + ' <span style="margin-left:auto;font-family:monospace;font-size:11px;opacity:.6">' + d.status + '</span><button onclick="recheckLicence()" style="margin-left:12px;padding:3px 10px;border-radius:4px;border:none;background:rgba(255,255,255,.2);color:inherit;font-size:11px;cursor:pointer">🔄 Nu controleren</button>';
   }catch(e){}
 }
 loadLicence();
+
+async function recheckLicence(){
+  await fetch('/api/licence/recheck', {method:'POST'});
+  setTimeout(loadLicence, 5000);
+}
 
 async function loadLanIP(){
   try{
