@@ -311,7 +311,6 @@ def api_wifi_status():
     return jsonify({"connected": bool(out), "ssid": out or "", "ip": ip or ""})
 
 @app.route("/api/wifi/scan")
-@auth.login_required
 def api_wifi_scan():
     import subprocess
     out = subprocess.getoutput("sudo iwlist wlan1 scan 2>/dev/null | grep ESSID | awk -F\'\"\' \'{print $2}\'")
@@ -332,6 +331,8 @@ def api_wifi_connect():
     with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
         f.write(conf)
     subprocess.run(["sudo", "wpa_cli", "-i", "wlan1", "reconfigure"], capture_output=True)
+    import time; time.sleep(3)
+    subprocess.run(["sudo", "dhcpcd", "wlan1"], capture_output=True)
     return jsonify({"ok": True})
 
 @app.route("/api/wifi/disconnect", methods=["POST"])
@@ -342,6 +343,41 @@ def api_wifi_disconnect():
     with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
         f.write(conf)
     subprocess.run(["sudo", "wpa_cli", "-i", "wlan1", "reconfigure"], capture_output=True)
+    import time; time.sleep(3)
+    subprocess.run(["sudo", "dhcpcd", "wlan1"], capture_output=True)
+    return jsonify({"ok": True})
+
+
+@app.route("/wifi-setup", methods=["GET", "POST"])
+def wifi_setup():
+    if request.method == "POST":
+        ssid = request.form.get("ssid", "")
+        password = request.form.get("password", "")
+        conf = f"ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=NL\n\nnetwork={{\n    ssid=\"{ssid}\"\n    psk=\"{password}\"\n    key_mgmt=WPA-PSK\n}}\n"
+        with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
+            f.write(conf)
+        import subprocess, time
+        subprocess.run(["sudo", "wpa_cli", "-i", "wlan1", "reconfigure"])
+        time.sleep(5)
+        subprocess.run(["sudo", "dhcpcd", "wlan1"])
+        return "<h2>Verbinding wordt gemaakt...</h2><p>Wacht 15 seconden.</p><a href='/wifi-setup'>Terug</a>"
+    return render_template("wifi_setup.html")
+
+
+@app.route("/wifi-connect-direct", methods=["POST"])
+def wifi_connect_direct():
+    import subprocess, time
+    d = request.json or {}
+    ssid = d.get("ssid","")
+    password = d.get("password","")
+    if not ssid:
+        return jsonify({"ok": False, "error": "Geen SSID"})
+    conf = "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=NL\n\nnetwork={\n    ssid=\"" + ssid + "\"\n    psk=\"" + password + "\"\n    key_mgmt=WPA-PSK\n}\n"
+    with open("/etc/wpa_supplicant/wpa_supplicant-wlan1.conf", "w") as f:
+        f.write(conf)
+    subprocess.run(["sudo", "wpa_cli", "-i", "wlan1", "reconfigure"])
+    time.sleep(5)
+    subprocess.run(["sudo", "dhcpcd", "-n", "wlan1"])
     return jsonify({"ok": True})
 
 # ── updates ───────────────────────────────────────────────────────────────────

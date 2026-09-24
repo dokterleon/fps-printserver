@@ -221,10 +221,11 @@ async function loadWifiStatus(){
 async function connectWifi(){
   const ssid = document.getElementById('wifi-ssid').value;
   const pass = document.getElementById('wifi-pass').value;
+  if(!ssid){ alert('Selecteer eerst een netwerk'); return; }
   document.getElementById('wifi-output').textContent = '{% if lang == "en" %}Connecting...{% else %}Verbinden...{% endif %}';
-  const d = await fetch('/api/wifi/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid,password:pass})}).then(r=>r.json());
-  document.getElementById('wifi-output').textContent = d.message;
-  setTimeout(loadWifiStatus, 5000);
+  const d = await fetch('/wifi-connect-direct',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid,password:pass})}).then(r=>r.json());
+  document.getElementById('wifi-output').textContent = d.ok ? '{% if lang == "en" %}Connected!{% else %}Verbonden!{% endif %}' : '{% if lang == "en" %}Failed{% else %}Mislukt{% endif %}';
+  setTimeout(loadWifiStatus, 8000);
 }
 
 async function disconnectWifi(){
