@@ -44,6 +44,7 @@ def check_licence():
         open("/tmp/fps_licence_status", "w").write("grace")
         return True  # Doorlaten bij geen internet
 
+import time as _t; _t.sleep(15)
 LICENCE_VALID = check_licence()
 
 
